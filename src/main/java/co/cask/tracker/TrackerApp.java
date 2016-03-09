@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Cask Data, Inc.
+ * Copyright © 2016 Cask Data, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -17,23 +17,20 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
+import co.cask.tracker.config.TrackerAppConfig;
 
 /**
  * A CDAP Extension that provides the ability to track data ingested either through Cask Hydrator or Custom
  * CDAP Application and provide input to data governance process on cluster.
  */
-public class TrackerApp extends AbstractApplication {
+public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public static final String AUDIT_LOG_DATASET_NAME = "AuditLog";
-
 
   @Override
   public void configure() {
     setName("Tracker");
-    setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform");
-    //createDataset(AUDIT_LOG_DATASET_NAME, KeyValueTable.class);
-    addService(new AuditLogService());
+    setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
+    addFlow(new AuditLogFlow(getConfig()));
+    addService(new AuditLogService(AUDIT_LOG_DATASET_NAME));
   }
-
-
-
 }
