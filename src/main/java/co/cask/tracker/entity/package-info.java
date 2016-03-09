@@ -15,7 +15,7 @@
  */
 
 /**
- * Package for TrackerApp Application.
+ * The entities required by the TrackerApp.
  */
 
-package co.cask.tracker;
+package co.cask.tracker.entity;

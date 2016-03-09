@@ -28,10 +28,16 @@
   <properties>
     <app.main.class>co.cask.tracker.TrackerApp</app.main.class>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>3.3.1</cdap.version>
+    <cdap.version>3.4.0-SNAPSHOT</cdap.version>
     <slf4j.version>1.7.5</slf4j.version>
     <guava.version>13.0.1</guava.version>
     <junit.version>4.11</junit.version>
+    <kafka.pack.version>0.9.0</kafka.pack.version>
+    <commons.codec.version>1.4</commons.codec.version>
+    <commons.net.version>3.1</commons.net.version>
+    <httpcomponents.client.version>4.2.5</httpcomponents.client.version>
+    <navigator.client.version>1.0</navigator.client.version>
+
   </properties>
 
   <dependencies>
@@ -50,6 +56,10 @@
         <exclusion>
           <groupId>asm</groupId>
           <artifactId>asm</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.scala-lang</groupId>
+          <artifactId>scala-library</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -74,8 +84,39 @@
     <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-common</artifactId>
-      <version>3.3.1</version>
+      <version>${cdap.version}</version>
     </dependency>
+    <dependency>
+      <groupId>co.cask.cdap</groupId>
+      <artifactId>cdap-kafka-flow-compat-0.8</artifactId>
+      <version>${kafka.pack.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.1.7</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>${commons.codec.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+      <version>${commons.net.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>${httpcomponents.client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>co.cask.cdap</groupId>
+      <artifactId>cdap-explore-jdbc</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+
   </dependencies>
 
   <build>
