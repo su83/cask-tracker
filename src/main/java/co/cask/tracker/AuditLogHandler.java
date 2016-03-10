@@ -57,7 +57,6 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     .create();
   private static final int DEFAULT_PAGE_SIZE = 10;
   private static final long DEFAULT_START_TIME = 0L;
-  private static final long DEFAULT_END_TIME = TimeMathParser.nowInSeconds();
   // If we scan more than this + offset, we return early since the UI can't display that many anyway.
   private static final long MAX_RESULTS_TO_SCAN = 100;
 
@@ -109,7 +108,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
         return;
       }
     }
-    long endTimeLong = DEFAULT_END_TIME;
+    long endTimeLong = TimeMathParser.nowInSeconds();
     if (endTime != null) {
       try {
         endTimeLong = TimeMathParser.parseTimeInSeconds(endTime);

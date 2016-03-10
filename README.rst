@@ -31,14 +31,14 @@ Prerequisites
 To use the 1.0.x version of Tracker, you must have CDAP version 3.4.x.
 
 Audit Publishing to Kafka
-----------------------------
+-------------------------
 The Tracker App contains a Flow that subscribes to the Kafka topic to which CDAP publishes
 the audit updates. Hence, before using this application, you should enable publishing of audit updates to
 Kafka, as described in the CDAP documentation `Enable Metadata Update Notifications
 <http://docs.cask.co/cdap/current/en/developers-manual/building-blocks/metadata-lineage.html#metadata-update-notifications>`__.
 
 Building Cask Tracker
-----------------
+---------------------
 You get started with Hydrator plugins by building directly from the latest source code::
 
   git clone https://github.com/caskdata/cask-tracker.git
@@ -46,10 +46,10 @@ You get started with Hydrator plugins by building directly from the latest sourc
   mvn clean package
 
 After the build completes, you will have a JAR in:
-``<plugin-name>/target/`` directory.
+``./target/`` directory.
 
 Deploying Cask Tracker
------------------
+----------------------
 Step 1: Deploy a plugin using the CDAP CLI::
 
   > load artifact <target/jar>
@@ -113,7 +113,7 @@ CDAP IRC Channel: #cdap on irc.freenode.net
 License and Trademarks
 ======================
 
-Copyright © 2015-2016 Cask Data, Inc.
+Copyright © 2016 Cask Data, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 in compliance with the License. You may obtain a copy of the License at

@@ -56,8 +56,8 @@ public class TrackerAppTest extends TestBase {
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
-  private static final Logger LOG = LoggerFactory.getLogger(AuditLogHandler.class);
-  private static long timer = 1456956659468L;
+  // This is the starting unix timestamp for generating the test data.
+  private static final long STARTING_TIMESTAMP = 1456956659468L;
   private static ApplicationManager testAppManager;
   private static ServiceManager serviceManager;
 
@@ -103,35 +103,29 @@ public class TrackerAppTest extends TestBase {
       "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"dataset\": \"ds1\", \"entity\": " +
         "\"DATASET\" }, \"user\": \"user1\", \"type\": \"CREATE\", \"payload\": {} }",
     };
-    for (int j = 0; j < 3; j++) {
+    //
+    long timer = STARTING_TIMESTAMP;
+    for (int j = 0; j < 6; j++) {
       for (int i = 0; i < testData.length; i++) {
         streamManager.send(String.format(testData[i], timer));
         timer++;
       }
     }
     RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(12,60L,TimeUnit.SECONDS);
+    metrics.waitForProcessed(12, 60L, TimeUnit.SECONDS);
   }
+
 
   @After
   public void destroyApp() throws Exception {
-    testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).stop();
-    testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).stop();
     testAppManager.stopAll();
+    clear();
   }
+
 
   @Test
   public void testSingleResult() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(),
-                      "auditlog/stream/stream1?startTime=1456956659467&endTime=1456956659469");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?startTime=1456956659467&endTime=1456956659469");
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(1,resp.getTotalResults());
     Assert.assertEquals("stream:default.stream1",
@@ -140,15 +134,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testMultipleResults() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?endTime=1456956659490");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?endTime=1456956659490");
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(12,resp.getTotalResults());
     for (int i = 0; i < resp.getResults().size(); i++) {
@@ -159,15 +145,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testOffset() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?offset=1&endTime=1456956659490");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?offset=1&endTime=1456956659490");
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(12,resp.getTotalResults());
     Assert.assertEquals(1,resp.getOffset());
@@ -180,15 +158,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testPageSize() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?limit=1&endTime=1456956659490");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?limit=1&endTime=1456956659490");
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(12,resp.getTotalResults());
     Assert.assertEquals(0,resp.getOffset());
@@ -199,43 +169,19 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testInvalidDatesError() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?startTime=1&endTime=0");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?startTime=1&endTime=0");
     Assert.assertEquals("\"startTime must be before endTime.\"",response);
   }
 
   @Test
   public void testInvalidOffset() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?offset=-1");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?offset=-1");
     Assert.assertEquals("\"offset cannot be negative.\"",response);
   }
 
   @Test
   public void testInvalidLimit() throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?limit=-1");
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
-    String response;
-    try {
-      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
-    } finally {
-      connection.disconnect();
-    }
+    String response = getServiceResponse("auditlog/stream/stream1?limit=-1");
     Assert.assertEquals("\"limit cannot be negative.\"",response);
   }
 
@@ -247,5 +193,23 @@ public class TrackerAppTest extends TestBase {
     } else {
       return deployApplication(appClass, new File(URI.create(path.substring(0, path.indexOf("!/")))));
     }
+  }
+
+  private String getServiceResponse(String request) throws Exception {
+    URL url = new URL(serviceManager.getServiceURL(), request);
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    String response;
+    try {
+      if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+        response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
+      } else if (connection.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
+        response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
+      } else {
+        throw new Exception("Invalid response code returned: "+connection.getResponseCode());
+      }
+    } finally {
+      connection.disconnect();
+    }
+    return response;
   }
 }

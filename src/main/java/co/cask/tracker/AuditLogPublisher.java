@@ -65,13 +65,14 @@ public final class AuditLogPublisher extends AbstractFlowlet {
   private Table auditLog;
 
   /**
+   *
    * @param datasetName The name of the dataset to write the audit log to
    */
   public AuditLogPublisher(String datasetName) {
     this.auditLogDatasetName = datasetName;
   }
 
-  /******
+  /**
    * This method generates the key to use for scanning the data table.
    * @param namespace the namespace where the entity exists
    * @param entityType the type of the entity
