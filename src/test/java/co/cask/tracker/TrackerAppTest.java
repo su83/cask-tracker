@@ -25,6 +25,7 @@ import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.FlowManager;
 import co.cask.cdap.test.ServiceManager;
+import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditLogResponse;
@@ -32,7 +33,9 @@ import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -54,24 +57,73 @@ public class TrackerAppTest extends TestBase {
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
   private static final Logger LOG = LoggerFactory.getLogger(AuditLogHandler.class);
+  private static long timer = 1456956659468L;
+  private static ApplicationManager testAppManager;
+  private static ServiceManager serviceManager;
 
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
 
-  @Test
-  public void testSingleResult() throws Exception {
-    ApplicationManager testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
-    FlowManager testFlowManager = testAppManager.getFlowManager(GeneratorToAuditLogFlow.FLOW_NAME).start();
+  /*
+  @BeforeClass
+  public static void configureApp() throws Exception {
+    testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
+    FlowManager testFlowManager = testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).start();
     testFlowManager.waitForStatus(true);
 
-    RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(10, 60, TimeUnit.SECONDS);
+    serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
+    serviceManager.waitForStatus(true);
+  }*/
 
-    ServiceManager serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
+  @Before
+  public void configureStream() throws Exception {
+    testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
+    FlowManager testFlowManager = testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).start();
+    testFlowManager.waitForStatus(true);
+
+    serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
     serviceManager.waitForStatus(true);
 
+    StreamManager streamManager = getStreamManager("testStream");
+    // Adapted from https://wiki.cask.co/display/CE/Audit+information+publishing
+    String[] testData = new String[]{
+      "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"stream\": \"stream1\", \"entity\": " +
+        "\"STREAM\" }, \"user\": \"user1\", \"type\": \"ACCESS\", \"payload\": { \"accessType\": \"WRITE\", " +
+        "\"accessor\": { \"namespace\": \"ns1\", \"application\": \"app1\", \"type\": \"Flow\", \"program\": " +
+        "\"flow1\", \"run\": \"run1\", \"entity\": \"PROGRAM_RUN\" } } }",
+      "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"stream\": \"stream1\", \"entity\": " +
+        "\"STREAM\" }, \"user\": \"user1\", \"type\": \"ACCESS\", \"payload\": { \"accessType\": \"UNKNOWN\", " +
+        "\"accessor\": { \"service\": \"explore\", \"entity\": \"SYSTEM_SERVICE\" } } }",
+      "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"application\": \"app1\", \"entity\": " +
+        "\"APPLICATION\" }, \"user\": \"user1\", \"type\": \"METADATA_CHANGE\", \"payload\": { \"previous\": " +
+        "{ \"USER\": { \"properties\": { \"uk\": \"uv\", \"uk1\": \"uv2\" }, \"tags\": [ \"ut1\", \"ut2\" ] }, " +
+        "\"SYSTEM\": { \"properties\": { \"sk\": \"sv\" }, \"tags\": [] } }, \"additions\": { \"SYSTEM\": { " +
+        "\"properties\": { \"sk\": \"sv\" }, \"tags\": [ \"t1\", \"t2\" ] } }, \"deletions\": { \"USER\": { " +
+        "\"properties\": { \"uk\": \"uv\" }, \"tags\": [ \"ut1\" ] } } } }",
+      "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"dataset\": \"ds1\", \"entity\": " +
+        "\"DATASET\" }, \"user\": \"user1\", \"type\": \"CREATE\", \"payload\": {} }",
+    };
+    for (int j = 0; j < 3; j++) {
+      for (int i = 0; i < testData.length; i++) {
+        streamManager.send(String.format(testData[i], timer));
+        timer++;
+      }
+    }
+    RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
+    metrics.waitForProcessed(12,60L,TimeUnit.SECONDS);
+  }
+
+  @After
+  public void destroyApp() throws Exception {
+    testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).stop();
+    testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).stop();
+    testAppManager.stopAll();
+  }
+
+  @Test
+  public void testSingleResult() throws Exception {
     URL url = new URL(serviceManager.getServiceURL(),
-                      "auditlog?type=program&name=ETLWorkflow&startTime=1457467029550&endTime=1457467029560");
+                      "auditlog/stream/stream1?startTime=1456956659467&endTime=1456956659469");
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
     String response;
@@ -82,23 +134,13 @@ public class TrackerAppTest extends TestBase {
     }
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(1,resp.getTotalResults());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
+    Assert.assertEquals("stream:default.stream1",
                         resp.getResults().get(0).getEntityId().toString());
   }
 
   @Test
   public void testMultipleResults() throws Exception {
-    ApplicationManager testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
-    FlowManager testFlowManager = testAppManager.getFlowManager(GeneratorToAuditLogFlow.FLOW_NAME).start();
-    testFlowManager.waitForStatus(true);
-
-    RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(10, 60, TimeUnit.SECONDS);
-
-    ServiceManager serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
-    serviceManager.waitForStatus(true);
-
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog?type=program&name=ETLWorkflow");
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?endTime=1456956659490");
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
     String response;
@@ -108,28 +150,16 @@ public class TrackerAppTest extends TestBase {
       connection.disconnect();
     }
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(3,resp.getTotalResults());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
-                        resp.getResults().get(0).getEntityId().toString());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
-                        resp.getResults().get(1).getEntityId().toString());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
-                        resp.getResults().get(2).getEntityId().toString());
+    Assert.assertEquals(12,resp.getTotalResults());
+    for (int i = 0; i < resp.getResults().size(); i++) {
+      Assert.assertEquals("stream:default.stream1",
+                          resp.getResults().get(i).getEntityId().toString());
+    }
   }
 
   @Test
   public void testOffset() throws Exception {
-    ApplicationManager testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
-    FlowManager testFlowManager = testAppManager.getFlowManager(GeneratorToAuditLogFlow.FLOW_NAME).start();
-    testFlowManager.waitForStatus(true);
-
-    RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(10, 60, TimeUnit.SECONDS);
-
-    ServiceManager serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
-    serviceManager.waitForStatus(true);
-
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog?type=program&name=ETLWorkflow&offset=1");
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?offset=1&endTime=1456956659490");
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
     String response;
@@ -139,29 +169,18 @@ public class TrackerAppTest extends TestBase {
       connection.disconnect();
     }
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(3,resp.getTotalResults());
+    Assert.assertEquals(12,resp.getTotalResults());
     Assert.assertEquals(1,resp.getOffset());
-    Assert.assertEquals(2,resp.getResults().size());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
-                        resp.getResults().get(0).getEntityId().toString());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
-                        resp.getResults().get(1).getEntityId().toString());
+    Assert.assertEquals(10,resp.getResults().size());
+    for (int i = 0; i < resp.getResults().size(); i++) {
+      Assert.assertEquals("stream:default.stream1",
+                          resp.getResults().get(i).getEntityId().toString());
+    }
   }
 
   @Test
   public void testPageSize() throws Exception {
-    ApplicationManager testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
-    FlowManager testFlowManager = testAppManager.getFlowManager(GeneratorToAuditLogFlow.FLOW_NAME).start();
-    testFlowManager.waitForStatus(true);
-
-    RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(10, 60, TimeUnit.SECONDS);
-
-    ServiceManager serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
-    serviceManager.waitForStatus(true);
-
-    URL url = new URL(serviceManager.getServiceURL(), "auditlog?type=program&name=ETLWorkflow&pageSize=1");
-    LOG.warn(url.toString());
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?limit=1&endTime=1456956659490");
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
     String response;
@@ -171,14 +190,56 @@ public class TrackerAppTest extends TestBase {
       connection.disconnect();
     }
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(3,resp.getTotalResults());
+    Assert.assertEquals(12,resp.getTotalResults());
     Assert.assertEquals(0,resp.getOffset());
     Assert.assertEquals(1,resp.getResults().size());
-    Assert.assertEquals("program:default.testCubeAdapter.workflow.ETLWorkflow",
+    Assert.assertEquals("stream:default.stream1",
                         resp.getResults().get(0).getEntityId().toString());
   }
 
-  private ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
+  @Test
+  public void testInvalidDatesError() throws Exception {
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?startTime=1&endTime=0");
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
+    String response;
+    try {
+      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
+    } finally {
+      connection.disconnect();
+    }
+    Assert.assertEquals("\"startTime must be before endTime.\"",response);
+  }
+
+  @Test
+  public void testInvalidOffset() throws Exception {
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?offset=-1");
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
+    String response;
+    try {
+      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
+    } finally {
+      connection.disconnect();
+    }
+    Assert.assertEquals("\"offset cannot be negative.\"",response);
+  }
+
+  @Test
+  public void testInvalidLimit() throws Exception {
+    URL url = new URL(serviceManager.getServiceURL(), "auditlog/stream/stream1?limit=-1");
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, connection.getResponseCode());
+    String response;
+    try {
+      response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
+    } finally {
+      connection.disconnect();
+    }
+    Assert.assertEquals("\"limit cannot be negative.\"",response);
+  }
+
+  private static ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
     URL classUrl = Product.class.getClassLoader().getResource("scala/Product.class");
     String path = classUrl.getFile();
     if (config != null) {
