@@ -44,20 +44,22 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
 
 /**
- * AuditLogHandler - Handle requests to the AuditLog API.
+ * This class handles requests to the AuditLog API.
  */
 public final class AuditLogHandler extends AbstractHttpServiceHandler {
   private static final Gson GSON = new GsonBuilder()
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
-  private static final Logger LOG = LoggerFactory.getLogger(AuditLogHandler.class);
   private static final int DEFAULT_PAGE_SIZE = 10;
   private static final long DEFAULT_START_TIME = 0L;
   private static final long DEFAULT_END_TIME = TimeMathParser.nowInSeconds();
+  // If we scan more than this + offset, we return early since the UI can't display that many anyway.
+  private static final long MAX_RESULTS_TO_SCAN = 100;
 
   @Property
   private final String auditLogTableName;
@@ -81,17 +83,22 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     namespace = context.getNamespace();
   }
 
-  @Path("auditlog")
+  @Path("auditlog/{type}/{name}")
   @GET
   public void query(HttpServiceRequest request, HttpServiceResponder responder,
-                    @QueryParam("type") String entityType,
-                    @QueryParam("name") String name,
+                    @PathParam("type") String entityType,
+                    @PathParam("name") String name,
                     @QueryParam("offset") int offset,
-                    @QueryParam("pageSize") int pageSize,
+                    @QueryParam("limit") int limit,
                     @QueryParam("startTime") String startTime,
                     @QueryParam("endTime") String endTime) {
-    if (pageSize == 0) {
-      pageSize = DEFAULT_PAGE_SIZE;
+    if (limit < 0) {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "limit cannot be negative.");
+      return;
+    }
+    if (offset < 0) {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "offset cannot be negative.");
+      return;
     }
     long startTimeLong = DEFAULT_START_TIME;
     if (startTime != null) {
@@ -111,11 +118,18 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
         return;
       }
     }
+    if (startTimeLong > endTimeLong) {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "startTime must be before endTime.");
+      return;
+    }
+    if (limit == 0) {
+      limit = DEFAULT_PAGE_SIZE;
+    }
     List<AuditMessage> logList = new ArrayList<>();
     Scanner scanner = auditLogTable.scan(
       new Scan(
-        Bytes.toBytes(AuditLogPublisher.getKey(this.namespace, entityType, name, startTimeLong)),
-        Bytes.toBytes(AuditLogPublisher.getKey(this.namespace, entityType, name, endTimeLong))
+        Bytes.toBytes(AuditLogPublisher.getScanKey(this.namespace, entityType, name, startTimeLong)),
+        Bytes.toBytes(AuditLogPublisher.getScanKey(this.namespace, entityType, name, endTimeLong))
       )
     );
     int totalResults = 0;
@@ -128,30 +142,43 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     }
     while ((row = scanner.next()) != null) {
       totalResults++;
-      if (totalResults <= (pageSize + offset)) {
-        EntityId entityId = GSON.fromJson(row.getString("entityId"), EntityId.class);
-        MessageType messageType = MessageType.valueOf(row.getString("actionType"));
-        AuditPayload payload;
-        switch (messageType) {
-          case METADATA_CHANGE:
-            payload = GSON.fromJson(row.getString("metadata"), MetadataPayload.class);
-            break;
-          case ACCESS:
-            payload = GSON.fromJson(row.getString("metadata"), AccessPayload.class);
-            break;
-          default:
-            payload = AuditPayload.EMPTY_PAYLOAD;
-        }
-        AuditMessage message = new AuditMessage(row.getLong("timestamp"),
-                                                entityId,
-                                                row.getString("user"),
-                                                messageType,
-                                                payload);
+      if (totalResults <= (limit + offset)) {
+        AuditMessage message = getAuditMessage(row);
         logList.add(message);
+      }
+      // End early if there are too many results to scan.
+      if (totalResults >= (MAX_RESULTS_TO_SCAN + offset)) {
+        break;
       }
     }
     AuditLogResponse resp = new AuditLogResponse(totalResults, logList, offset);
     responder.sendJson(200, resp);
+  }
+
+  /**
+   * Helper method to build the AuditMessage from a row
+   * @param row the row from the scanner to build the AuditMessage from
+   * @return a new AuditMessage based on the information in the row
+   */
+  private AuditMessage getAuditMessage(Row row) {
+    EntityId entityId = GSON.fromJson(row.getString("entityId"), EntityId.class);
+    MessageType messageType = MessageType.valueOf(row.getString("actionType"));
+    AuditPayload payload;
+    switch (messageType) {
+      case METADATA_CHANGE:
+        payload = GSON.fromJson(row.getString("metadata"), MetadataPayload.class);
+        break;
+      case ACCESS:
+        payload = GSON.fromJson(row.getString("metadata"), AccessPayload.class);
+        break;
+      default:
+        payload = AuditPayload.EMPTY_PAYLOAD;
+    }
+    return new AuditMessage(row.getLong("timestamp"),
+                            entityId,
+                            row.getString("user"),
+                            messageType,
+                            payload);
   }
 }
 

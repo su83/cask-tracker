@@ -22,6 +22,7 @@ import co.cask.cdap.api.dataset.table.Put;
 import co.cask.cdap.api.dataset.table.Table;
 import co.cask.cdap.api.flow.flowlet.AbstractFlowlet;
 import co.cask.cdap.api.flow.flowlet.FlowletContext;
+import co.cask.cdap.api.flow.flowlet.StreamEvent;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
@@ -47,6 +48,8 @@ import joptsimple.internal.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
+
 /**
  * A flowlet to write Audit Log data to a dataset.
  */
@@ -69,15 +72,35 @@ public final class AuditLogPublisher extends AbstractFlowlet {
   }
 
   /******
-   * This method generates the key to use for the data table.
+   * This method generates the key to use for scanning the data table.
    * @param namespace the namespace where the entity exists
    * @param entityType the type of the entity
    * @param entityName the name of the entity
    * @param timestamp the timestamp of the entity to search for
+   * @return A string that can be used to scan the dataset
+   */
+  public static String getScanKey(String namespace,
+                              String entityType,
+                              String entityName,
+                              Long timestamp) {
+    return String.format("%s-%s-%s-%s", namespace, entityType, entityName, timestamp);
+  }
+
+  /**
+   * This method generates a unique key to use for the data table.
+   * @param namespace the namespace where the entity exists
+   * @param entityType the type of the entity
+   * @param entityName the name of the entity
+   * @param timestamp the timestamp of the entity to search for
+   * @param unique a unique string to avoid collisions
    * @return A string that can be used as a key in the dataset
    */
-  public static String getKey(String namespace, String entityType, String entityName, Long timestamp) {
-    return namespace + "-" + entityType + "-" + entityName + "-" + timestamp;
+  public static String getKey(String namespace,
+                              String entityType,
+                              String entityName,
+                              Long timestamp,
+                              String unique) {
+    return String.format("%s-%s-%s-%s-%s", namespace, entityType, entityName, timestamp, unique);
   }
 
   @Override
@@ -92,6 +115,11 @@ public final class AuditLogPublisher extends AbstractFlowlet {
     auditLog = context.getDataset(auditLogDatasetName);
   }
 
+  @ProcessInput
+  public void process(StreamEvent event) {
+    String value = Bytes.toString(event.getBody());
+    process(value);
+  }
 
   @ProcessInput
   public void process(String event) {
@@ -159,12 +187,12 @@ public final class AuditLogPublisher extends AbstractFlowlet {
         user = DEFAULT_USER;
       }
       this.auditLog.put(
-        new Put(getKey(namespace, type, name, message.getTime()))
+        new Put(getKey(namespace, type, name, message.getTime(), UUID.randomUUID().toString()))
           .add("timestamp", message.getTime())
           .add("entityId", GSON.toJson(message.getEntityId()))
           .add("user", user)
           .add("actionType", message.getType().name())
-          .add("entityKind", type)
+          .add("entityType", type)
           .add("entityName", name)
           .add("metadata", GSON.toJson(message.getPayload())));
     }
