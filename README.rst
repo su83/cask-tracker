@@ -48,6 +48,8 @@ You get started with Hydrator plugins by building directly from the latest sourc
 After the build completes, you will have a JAR in:
 ``./target/`` directory.
 
+You can build without running tests: ``mvn clean install -DskipTests``
+
 Deploying Cask Tracker
 ----------------------
 Step 1: Deploy a plugin using the CDAP CLI::
@@ -55,12 +57,18 @@ Step 1: Deploy a plugin using the CDAP CLI::
   > load artifact <target/jar>
 
 
-Step 2: Create an application configuration file that contains:
+Step 2: Create an application configuration file based on the instructions below.
 
-- Kafka Metadata Config (``metadataKafkaConfig``): Kafka Consumer Flowlet configuration information
-  (info about where we can fetch metadata updates)
+Step 3: Create a CDAP Application by providing the configuration file::
 
-Sample Application Configuration file::
+  > create app TrackerApp tracker 1.0.0-SNAPSHOT USER appconfig.txt
+
+
+Configuration File
+------------------
+Kafka Audit Log reader config (``metadataKafkaConfig``): Kafka Consumer Flowlet configuration information.
+
+Sample Configuration file::
 
   {
     "config": {
@@ -76,23 +84,17 @@ This key contains a property map with these properties:
 
 Required Properties:
 
-- ``zookeeperString``: Kafka Zookeeper string that can be used to subscribe to the CDAP metadata updates
-- ``brokerString``: Kafka Broker string to which CDAP metadata is published
+- ``zookeeperString``: Kafka Zookeeper string that can be used to subscribe to the CDAP audit log updates
+- ``brokerString``: Kafka Broker string to which CDAP audit log data is published
 
 *Note:* Specify either the ``zookeeperString`` or the ``brokerString``.
 
 Optional Properties:
 
-- ``topic``: Kafka Topic to which CDAP Metadata updates are published; default is ``cdap-metadata-updates`` which
-  corresponds to the default topic used in CDAP for Metadata updates
+- ``topic``: Kafka Topic to which CDAP audit updates are published; default is ``audit`` which
+  corresponds to the default topic used in CDAP for Audit log updates
 - ``numPartitions``: Number of Kafka partitions; default is set to ``10``
 - ``offsetDataset``: Name of the dataset where Kafka offsets are stored; default is ``kafkaOffset``
-
-Step 3: Create a CDAP Application by providing the configuration file::
-
-  > create app TrackerApp tracker 1.0.0-SNAPSHOT USER appconfig.txt
-
-You can build without running tests: ``mvn clean install -DskipTests``
 
 Mailing Lists
 -------------
