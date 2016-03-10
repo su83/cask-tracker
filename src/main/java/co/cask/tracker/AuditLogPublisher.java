@@ -44,7 +44,6 @@ import co.cask.cdap.proto.id.StreamId;
 import co.cask.cdap.proto.id.StreamViewId;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import joptsimple.internal.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,41 +71,8 @@ public final class AuditLogPublisher extends AbstractFlowlet {
     this.auditLogDatasetName = datasetName;
   }
 
-  /**
-   * This method generates the key to use for scanning the data table.
-   * @param namespace the namespace where the entity exists
-   * @param entityType the type of the entity
-   * @param entityName the name of the entity
-   * @param timestamp the timestamp of the entity to search for
-   * @return A string that can be used to scan the dataset
-   */
-  public static String getScanKey(String namespace,
-                              String entityType,
-                              String entityName,
-                              Long timestamp) {
-    return String.format("%s-%s-%s-%s", namespace, entityType, entityName, timestamp);
-  }
-
-  /**
-   * This method generates a unique key to use for the data table.
-   * @param namespace the namespace where the entity exists
-   * @param entityType the type of the entity
-   * @param entityName the name of the entity
-   * @param timestamp the timestamp of the entity to search for
-   * @param unique a unique string to avoid collisions
-   * @return A string that can be used as a key in the dataset
-   */
-  public static String getKey(String namespace,
-                              String entityType,
-                              String entityName,
-                              Long timestamp,
-                              String unique) {
-    return String.format("%s-%s-%s-%s-%s", namespace, entityType, entityName, timestamp, unique);
-  }
-
   @Override
   protected void configure() {
-    super.configure();
     createDataset(auditLogDatasetName, Table.class);
   }
 
@@ -118,17 +84,15 @@ public final class AuditLogPublisher extends AbstractFlowlet {
 
   @ProcessInput
   public void process(StreamEvent event) {
-    String value = Bytes.toString(event.getBody());
-    process(value);
+    process(Bytes.toString(event.getBody()));
   }
 
   @ProcessInput
   public void process(String event) {
-    byte[] toStore = Bytes.toBytes(event);
-    if (toStore.length > 0) {
+    if (event.length() > 0) {
       AuditMessage message = GSON.fromJson(event, AuditMessage.class);
       EntityId entityId = message.getEntityId();
-      String namespace = Strings.EMPTY;
+      String namespace = "";
       String type = "";
       String name = "";
       if (entityId instanceof NamespacedId) {
@@ -197,5 +161,22 @@ public final class AuditLogPublisher extends AbstractFlowlet {
           .add("entityName", name)
           .add("metadata", GSON.toJson(message.getPayload())));
     }
+  }
+
+  /**
+   * This method generates a unique key to use for the data table.
+   * @param namespace the namespace where the entity exists
+   * @param entityType the type of the entity
+   * @param entityName the name of the entity
+   * @param timestamp the timestamp of the entity to search for
+   * @param unique a unique string to avoid key collisions
+   * @return A string that can be used as a key in the dataset
+   */
+  private String getKey(String namespace,
+                        String entityType,
+                        String entityName,
+                        Long timestamp,
+                        String unique) {
+    return String.format("%s-%s-%s-%s-%s", namespace, entityType, entityName, timestamp, unique);
   }
 }

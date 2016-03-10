@@ -91,11 +91,6 @@
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-common</artifactId>
-      <version>${cdap.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-kafka-flow-compat-0.8</artifactId>
       <version>${kafka.pack.version}</version>
     </dependency>
@@ -105,26 +100,15 @@
       <version>1.1.1.7</version>
     </dependency>
     <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>${commons.codec.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-net</groupId>
-      <artifactId>commons-net</artifactId>
-      <version>${commons.net.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>${httpcomponents.client.version}</version>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-explore-jdbc</artifactId>
-      <version>${cdap.version}</version>
+      <artifactId>cdap-proto</artifactId>
+      <version>3.4.0-SNAPSHOT</version>
     </dependency>
-
   </dependencies>
 
   <build>
