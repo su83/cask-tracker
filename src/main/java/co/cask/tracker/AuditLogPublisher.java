@@ -17,6 +17,7 @@ package co.cask.tracker;
 
 import co.cask.cdap.api.annotation.ProcessInput;
 import co.cask.cdap.api.annotation.Property;
+import co.cask.cdap.api.annotation.UseDataSet;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.table.Put;
 import co.cask.cdap.api.dataset.table.Table;
@@ -59,28 +60,8 @@ public final class AuditLogPublisher extends AbstractFlowlet {
         .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
         .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
         .create();
-  @Property
-  private final String auditLogDatasetName;
+  @UseDataSet(TrackerApp.AUDIT_LOG_DATASET_NAME)
   private Table auditLog;
-
-  /**
-   *
-   * @param datasetName The name of the dataset to write the audit log to
-   */
-  public AuditLogPublisher(String datasetName) {
-    this.auditLogDatasetName = datasetName;
-  }
-
-  @Override
-  protected void configure() {
-    createDataset(auditLogDatasetName, Table.class);
-  }
-
-  @Override
-  public void initialize(FlowletContext context) throws Exception {
-    super.initialize(context);
-    auditLog = context.getDataset(auditLogDatasetName);
-  }
 
   @ProcessInput
   public void process(StreamEvent event) {

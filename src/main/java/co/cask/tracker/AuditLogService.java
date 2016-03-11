@@ -22,20 +22,12 @@ import co.cask.cdap.api.service.AbstractService;
  */
 public class AuditLogService extends AbstractService {
   public static final String SERVICE_NAME = "AuditLog";
-  private final String datasetName;
-
-  /**
-   * @param datasetName the name of the data set to read the audit logs from
-   */
-  public AuditLogService(String datasetName) {
-    this.datasetName = datasetName;
-  }
 
   @Override
   protected void configure() {
     setName(SERVICE_NAME);
     setDescription("A service that exposes the Tracker audit log as an API.");
-    addHandler(new AuditLogHandler(datasetName));
+    addHandler(new AuditLogHandler());
   }
 }
 

@@ -64,17 +64,6 @@ public class TrackerAppTest extends TestBase {
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
 
-  /*
-  @BeforeClass
-  public static void configureApp() throws Exception {
-    testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
-    FlowManager testFlowManager = testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).start();
-    testFlowManager.waitForStatus(true);
-
-    serviceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
-    serviceManager.waitForStatus(true);
-  }*/
-
   @Before
   public void configureStream() throws Exception {
     testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
@@ -103,7 +92,6 @@ public class TrackerAppTest extends TestBase {
       "{ \"time\": %d, \"entityId\": { \"namespace\": \"default\", \"dataset\": \"ds1\", \"entity\": " +
         "\"DATASET\" }, \"user\": \"user1\", \"type\": \"CREATE\", \"payload\": {} }",
     };
-    //
     long timer = STARTING_TIMESTAMP;
     for (int j = 0; j < 6; j++) {
       for (int i = 0; i < testData.length; i++) {
@@ -115,13 +103,11 @@ public class TrackerAppTest extends TestBase {
     metrics.waitForProcessed(12, 60L, TimeUnit.SECONDS);
   }
 
-
   @After
   public void destroyApp() throws Exception {
     testAppManager.stopAll();
     clear();
   }
-
 
   @Test
   public void testSingleResult() throws Exception {
