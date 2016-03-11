@@ -35,7 +35,7 @@ public class AuditLogFlow extends AbstractFlow {
     setName(FLOW_NAME);
     setDescription("Flow that subscribes to Metadata changes and propagates them to the AuditLog");
     addFlowlet("metadataConsumer", new MetadataConsumer(trackerAppConfig.getMetadataKafkaConfig()));
-    addFlowlet("auditLogPublisher", new AuditLogPublisher(TrackerApp.AUDIT_LOG_DATASET_NAME));
+    addFlowlet("auditLogPublisher", new AuditLogPublisher());
     connect("metadataConsumer", "auditLogPublisher");
   }
 }

@@ -13,7 +13,7 @@ public class StreamToAuditLogFlow extends AbstractFlow {
     setName(FLOW_NAME);
     setDescription("A temp flow to test the audit log");
     addStream("testStream");
-    addFlowlet("auditLogPublisher", new AuditLogPublisher(TestAuditLogPublisherApp.AUDIT_LOG_DATASET_NAME));
+    addFlowlet("auditLogPublisher", new AuditLogPublisher());
     connectStream("testStream","auditLogPublisher");
   }
 }

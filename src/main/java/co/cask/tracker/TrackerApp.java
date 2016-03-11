@@ -17,6 +17,7 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
+import co.cask.cdap.api.dataset.table.Table;
 import co.cask.tracker.config.TrackerAppConfig;
 
 /**
@@ -30,7 +31,8 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public void configure() {
     setName("Tracker");
     setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
+    createDataset(AUDIT_LOG_DATASET_NAME, Table.class);
     addFlow(new AuditLogFlow(getConfig()));
-    addService(new AuditLogService(AUDIT_LOG_DATASET_NAME));
+    addService(new AuditLogService());
   }
 }
