@@ -16,13 +16,11 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.annotation.ProcessInput;
-import co.cask.cdap.api.annotation.Property;
 import co.cask.cdap.api.annotation.UseDataSet;
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.table.Put;
 import co.cask.cdap.api.dataset.table.Table;
 import co.cask.cdap.api.flow.flowlet.AbstractFlowlet;
-import co.cask.cdap.api.flow.flowlet.FlowletContext;
 import co.cask.cdap.api.flow.flowlet.StreamEvent;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
