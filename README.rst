@@ -48,7 +48,7 @@ You get started with Hydrator plugins by building directly from the latest sourc
 After the build completes, you will have a JAR in:
 ``./target/`` directory.
 
-You can build without running tests: ``mvn clean install -DskipTests``
+You can build without running tests: ``mvn clean package -DskipTests``
 
 Deploying Cask Tracker
 ----------------------

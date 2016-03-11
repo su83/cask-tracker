@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 /**
  * Subscribes to Kafka messages published for the CDAP Platform that contains the Metadata Change records.
  */
-public final class MetadataConsumer extends Kafka08ConsumerFlowlet<ByteBuffer, ByteBuffer> {
+public final class MetadataConsumer extends Kafka08ConsumerFlowlet<ByteBuffer, String> {
   private static final Logger LOG = LoggerFactory.getLogger(MetadataConsumer.class);
   private static final Gson GSON = new Gson();
 
@@ -75,7 +75,6 @@ public final class MetadataConsumer extends Kafka08ConsumerFlowlet<ByteBuffer, B
 
   @Override
   protected void configure() {
-    super.configure();
     createDataset(offsetDatasetName, KeyValueTable.class);
   }
 
@@ -116,8 +115,7 @@ public final class MetadataConsumer extends Kafka08ConsumerFlowlet<ByteBuffer, B
   }
 
   @Override
-  protected void processMessage(ByteBuffer metadataKafkaMessage) throws Exception {
-    String data = Bytes.toString(metadataKafkaMessage);
-    emitter.emit(data);
+  protected void processMessage(String metadataKafkaMessage) throws Exception {
+    emitter.emit(metadataKafkaMessage);
   }
 }

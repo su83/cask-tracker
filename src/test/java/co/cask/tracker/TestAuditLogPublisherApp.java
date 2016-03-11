@@ -17,7 +17,7 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
-import co.cask.cdap.api.dataset.table.Table;
+import co.cask.tracker.entity.AuditLogTable;
 
 /**
  * This app is used to test the AuditLog flowlet.
@@ -27,7 +27,7 @@ public class TestAuditLogPublisherApp extends AbstractApplication {
   public void configure() {
     setName("TestAuditLogPublisherApp");
     setDescription("A temp app to test the AuditLogPublisher flowlet");
-    createDataset(TrackerApp.AUDIT_LOG_DATASET_NAME, Table.class);
+    createDataset(TrackerApp.AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
     addFlow(new StreamToAuditLogFlow());
     addService(new AuditLogService());
   }

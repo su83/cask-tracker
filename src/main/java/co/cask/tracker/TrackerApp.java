@@ -17,8 +17,8 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
-import co.cask.cdap.api.dataset.table.Table;
 import co.cask.tracker.config.TrackerAppConfig;
+import co.cask.tracker.entity.AuditLogTable;
 
 /**
  * A CDAP Extension that provides the ability to track data ingested either through Cask Hydrator or Custom
@@ -31,7 +31,7 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public void configure() {
     setName("Tracker");
     setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
-    createDataset(AUDIT_LOG_DATASET_NAME, Table.class);
+    createDataset(AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
     addFlow(new AuditLogFlow(getConfig()));
     addService(new AuditLogService());
   }

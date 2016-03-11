@@ -18,35 +18,19 @@ package co.cask.tracker;
 import co.cask.cdap.api.annotation.ProcessInput;
 import co.cask.cdap.api.annotation.UseDataSet;
 import co.cask.cdap.api.common.Bytes;
-import co.cask.cdap.api.dataset.table.Put;
-import co.cask.cdap.api.dataset.table.Table;
 import co.cask.cdap.api.flow.flowlet.AbstractFlowlet;
 import co.cask.cdap.api.flow.flowlet.StreamEvent;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
-import co.cask.cdap.proto.element.EntityType;
-import co.cask.cdap.proto.id.ApplicationId;
-import co.cask.cdap.proto.id.DatasetId;
-import co.cask.cdap.proto.id.DatasetModuleId;
-import co.cask.cdap.proto.id.DatasetTypeId;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.id.FlowletId;
-import co.cask.cdap.proto.id.FlowletQueueId;
-import co.cask.cdap.proto.id.NamespacedArtifactId;
-import co.cask.cdap.proto.id.NamespacedId;
-import co.cask.cdap.proto.id.NotificationFeedId;
-import co.cask.cdap.proto.id.ProgramId;
-import co.cask.cdap.proto.id.ProgramRunId;
-import co.cask.cdap.proto.id.ScheduleId;
-import co.cask.cdap.proto.id.StreamId;
-import co.cask.cdap.proto.id.StreamViewId;
+import co.cask.tracker.entity.AuditLogTable;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import java.io.IOException;
 
 /**
  * A flowlet to write Audit Log data to a dataset.
@@ -59,7 +43,7 @@ public final class AuditLogPublisher extends AbstractFlowlet {
         .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
         .create();
   @UseDataSet(TrackerApp.AUDIT_LOG_DATASET_NAME)
-  private Table auditLog;
+  private AuditLogTable auditLog;
 
   @ProcessInput
   public void process(StreamEvent event) {
@@ -70,92 +54,11 @@ public final class AuditLogPublisher extends AbstractFlowlet {
   public void process(String event) {
     if (event.length() > 0) {
       AuditMessage message = GSON.fromJson(event, AuditMessage.class);
-      EntityId entityId = message.getEntityId();
-      String namespace = "";
-      String type = "";
-      String name = "";
-      if (entityId instanceof NamespacedId) {
-        namespace = ((NamespacedId) entityId).getNamespace();
-        EntityType entityType = entityId.getEntity();
-        type = entityType.name().toLowerCase();
-        // Unfortunately, there's no generic way to get the name of the entity
-        // so we need this switch statement and a bunch of casting.
-        switch (entityType) {
-          case APPLICATION:
-            name = ((ApplicationId) entityId).getApplication();
-            break;
-          case ARTIFACT:
-            name = ((NamespacedArtifactId) entityId).getArtifact();
-            break;
-          case DATASET:
-            name = ((DatasetId) entityId).getDataset();
-            break;
-          case DATASET_MODULE:
-            name = ((DatasetModuleId) entityId).getModule();
-            break;
-          case DATASET_TYPE:
-            name = ((DatasetTypeId) entityId).getType();
-            break;
-          case FLOWLET:
-            name = ((FlowletId) entityId).getFlowlet();
-            break;
-          case FLOWLET_QUEUE:
-            name = ((FlowletQueueId) entityId).getQueue();
-            break;
-          case NOTIFICATION_FEED:
-            name = ((NotificationFeedId) entityId).getFeed();
-            break;
-          case PROGRAM:
-            name = ((ProgramId) entityId).getProgram();
-            break;
-          case PROGRAM_RUN:
-            name = ((ProgramRunId) entityId).getRun();
-            break;
-          case SCHEDULE:
-            name = ((ScheduleId) entityId).getSchedule();
-            break;
-          case STREAM:
-            name = ((StreamId) entityId).getStream();
-            break;
-          case STREAM_VIEW:
-            name = ((StreamViewId) entityId).getView();
-            break;
-          default:
-            LOG.warn("Unknown entity type: " + entityType);
-        }
-      } else {
-        LOG.warn("Entity does not have a namespace: " + entityId);
+      try {
+        auditLog.write(message);
+      } catch (IOException e) {
+        LOG.warn(e.getMessage());
       }
-      String user = message.getUser();
-      if (user == null || user.isEmpty()) {
-        user = DEFAULT_USER;
-      }
-      this.auditLog.put(
-        new Put(getKey(namespace, type, name, message.getTime(), UUID.randomUUID().toString()))
-          .add("timestamp", message.getTime())
-          .add("entityId", GSON.toJson(message.getEntityId()))
-          .add("user", user)
-          .add("actionType", message.getType().name())
-          .add("entityType", type)
-          .add("entityName", name)
-          .add("metadata", GSON.toJson(message.getPayload())));
     }
-  }
-
-  /**
-   * This method generates a unique key to use for the data table.
-   * @param namespace the namespace where the entity exists
-   * @param entityType the type of the entity
-   * @param entityName the name of the entity
-   * @param timestamp the timestamp of the entity to search for
-   * @param unique a unique string to avoid key collisions
-   * @return A string that can be used as a key in the dataset
-   */
-  private String getKey(String namespace,
-                        String entityType,
-                        String entityName,
-                        Long timestamp,
-                        String unique) {
-    return String.format("%s-%s-%s-%s-%s", namespace, entityType, entityName, timestamp, unique);
   }
 }

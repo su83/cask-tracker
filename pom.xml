@@ -37,6 +37,10 @@
     <commons.net.version>3.1</commons.net.version>
     <httpcomponents.client.version>4.2.5</httpcomponents.client.version>
     <netty.version>3.6.6.Final</netty.version>
+    <maven-compiler.version>3.1</maven-compiler.version>
+    <maven-compiler-source.version>1.7</maven-compiler-source.version>
+    <maven-bundle.version>2.3.7</maven-bundle.version>
+    <maven-surefire.version>2.14.1</maven-surefire.version>
   </properties>
 
   <repositories>
@@ -94,19 +98,9 @@
       <version>${kafka.pack.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
-      <version>1.1.1.7</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>${httpcomponents.client.version}</version>
-    </dependency>
-    <dependency>
       <groupId>co.cask.cdap</groupId>
       <artifactId>cdap-proto</artifactId>
-      <version>3.4.0-SNAPSHOT</version>
+      <version>${cdap.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -121,16 +115,16 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.1</version>
+          <version>${maven-compiler.version}</version>
           <configuration>
-            <source>1.7</source>
-            <target>1.7</target>
+            <source>${maven-compiler-source.version}</source>
+            <target>${maven-compiler-source.version}</target>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.3.7</version>
+          <version>${maven-bundle.version}</version>
           <extensions>true</extensions>
           <configuration>
             <archive>
@@ -153,20 +147,12 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
-
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.14.1</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.3.7</version>
-      </plugin>
-    </plugins>
   </build>
 </project>
