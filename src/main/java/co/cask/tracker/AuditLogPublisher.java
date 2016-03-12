@@ -36,7 +36,6 @@ import java.io.IOException;
  * A flowlet to write Audit Log data to a dataset.
  */
 public final class AuditLogPublisher extends AbstractFlowlet {
-  private static final String DEFAULT_USER = "unknown";
   private static final Logger LOG = LoggerFactory.getLogger(AuditLogPublisher.class);
   private static final Gson GSON = new GsonBuilder()
         .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
@@ -57,7 +56,7 @@ public final class AuditLogPublisher extends AbstractFlowlet {
       try {
         auditLog.write(message);
       } catch (IOException e) {
-        LOG.warn(e.getMessage());
+        LOG.warn("Ignored audit event {} due to exception", event, e);
       }
     }
   }

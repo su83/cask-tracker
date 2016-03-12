@@ -33,6 +33,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -46,7 +48,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
   private static final Gson GSON = new GsonBuilder()
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
-  private static final int DEFAULT_PAGE_SIZE = 10;
+  private static final String DEFAULT_PAGE_SIZE = "10";
   private static final long DEFAULT_START_TIME = 0L;
   // If we scan more than this + offset, we return early since the UI can't display that many anyway.
   private static final long MAX_RESULTS_TO_SCAN = 100;
@@ -68,7 +70,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
                     @PathParam("type") String entityType,
                     @PathParam("name") String name,
                     @QueryParam("offset") int offset,
-                    @QueryParam("limit") int limit,
+                    @QueryParam("limit") @DefaultValue(DEFAULT_PAGE_SIZE) int limit,
                     @QueryParam("startTime") String startTime,
                     @QueryParam("endTime") String endTime) {
     if (limit < 0) {
@@ -101,13 +103,14 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "startTime must be before endTime.");
       return;
     }
-    if (limit == 0) {
-      limit = DEFAULT_PAGE_SIZE;
-    }
     List<AuditMessage> logList = new ArrayList<>();
     int totalResults = 0;
     AuditMessage message;
-    CloseableIterator<AuditMessage> messageIter = auditLogTable.scan(namespace, entityType, name, startTimeLong, endTimeLong);
+    CloseableIterator<AuditMessage> messageIter = auditLogTable.scan(namespace,
+                                                                     entityType,
+                                                                     name,
+                                                                     startTimeLong,
+                                                                     endTimeLong);
     try {
       // First skip to the offset
       if (offset > 0) {
@@ -125,6 +128,8 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
           break;
         }
       }
+    } catch (NoSuchElementException e) {
+      //no-op
     } finally {
       messageIter.close();
     }

@@ -18,6 +18,7 @@ package co.cask.tracker.entity;
 
 import co.cask.cdap.api.common.Bytes;
 import co.cask.cdap.api.dataset.DatasetSpecification;
+import co.cask.cdap.api.dataset.lib.AbstractCloseableIterator;
 import co.cask.cdap.api.dataset.lib.AbstractDataset;
 import co.cask.cdap.api.dataset.lib.CloseableIterator;
 import co.cask.cdap.api.dataset.module.EmbeddedDataset;
@@ -80,7 +81,7 @@ public class AuditLogTable extends AbstractDataset {
    * @param endTime the ending time for the scan in seconds
    * @return
    */
-  public AuditMessageIterator<AuditMessage> scan(String namespace,
+  public CloseableIterator<AuditMessage> scan(String namespace,
                       String entityType,
                       String entityName,
                       long startTime,
@@ -89,7 +90,7 @@ public class AuditLogTable extends AbstractDataset {
       new Scan(getScanKey(namespace, entityType, entityName, startTime),
                getScanKey(namespace, entityType, entityName, endTime))
     );
-    return new AuditMessageIterator<AuditMessage>(scanner);
+    return new AuditMessageIterator(scanner);
   }
 
   public void write(AuditMessage auditMessage) throws IOException {
@@ -150,6 +151,8 @@ public class AuditLogTable extends AbstractDataset {
       if (user == null || user.isEmpty()) {
         user = DEFAULT_USER;
       }
+      // The key allows for scanning by namespace, entity, and time. A UUID
+      // is added to ensure the key is unique.
       auditLog.put(
         new Put(getKey(namespace, type, name, auditMessage.getTime()))
           .add("timestamp", auditMessage.getTime())
@@ -228,7 +231,7 @@ public class AuditLogTable extends AbstractDataset {
   /**
    * A  closable iterator for moving through AuditMessages returned by a scan.
    */
-  private static final class AuditMessageIterator<T> implements CloseableIterator<AuditMessage> {
+  private static final class AuditMessageIterator extends AbstractCloseableIterator<AuditMessage> {
     private final Scanner scanner;
     private Row nextRow;
 
@@ -238,14 +241,9 @@ public class AuditLogTable extends AbstractDataset {
     }
 
     @Override
-    public boolean hasNext() {
-      return (nextRow != null);
-    }
-
-    @Override
-    public AuditMessage next() {
+    protected AuditMessage computeNext() {
       if (nextRow == null) {
-        return null;
+        return endOfData();
       }
       Row current = nextRow;
       nextRow = scanner.next();
@@ -253,15 +251,8 @@ public class AuditLogTable extends AbstractDataset {
     }
 
     @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void close() {
-      if (scanner != null) {
-        scanner.close();
-      }
+      scanner.close();
     }
   }
 }

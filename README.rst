@@ -39,7 +39,7 @@ Kafka, as described in the CDAP documentation `Enable Metadata Update Notificati
 
 Building Cask Tracker
 ---------------------
-You get started with Hydrator plugins by building directly from the latest source code::
+You get started with Tracker by building directly from the latest source code::
 
   git clone https://github.com/caskdata/cask-tracker.git
   cd cask-tracker
@@ -54,7 +54,7 @@ Deploying Cask Tracker
 ----------------------
 Step 1: Deploy a plugin using the CDAP CLI::
 
-  > load artifact <target/jar>
+  > load artifact target/tracker-<version>.jar
 
 
 Step 2: Create an application configuration file based on the instructions below.
