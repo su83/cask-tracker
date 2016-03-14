@@ -23,12 +23,10 @@ import co.cask.cdap.proto.audit.AuditPayload;
 import co.cask.cdap.proto.audit.AuditType;
 import co.cask.cdap.proto.audit.payload.access.AccessPayload;
 import co.cask.cdap.proto.audit.payload.access.AccessType;
-import co.cask.cdap.proto.audit.payload.metadata.MetadataAuditRecord;
 import co.cask.cdap.proto.audit.payload.metadata.MetadataPayload;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.metadata.MetadataScope;
 import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.FlowManager;
 import co.cask.cdap.test.ServiceManager;
@@ -53,11 +51,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,8 +62,6 @@ public class TrackerAppTest extends TestBase {
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
-  // This is the starting unix timestamp for generating the test data.
-  private static final long STARTING_TIMESTAMP = 1456956659468L;
   private static ApplicationManager testAppManager;
   private static ServiceManager serviceManager;
 
@@ -91,7 +83,7 @@ public class TrackerAppTest extends TestBase {
       streamManager.send(GSON.toJson(auditMessage));
     }
     RuntimeMetrics metrics = testFlowManager.getFlowletMetrics("auditLogPublisher");
-    metrics.waitForProcessed(4, 60L, TimeUnit.SECONDS);
+    metrics.waitForProcessed(testData.size(), 60L, TimeUnit.SECONDS);
   }
 
   @After
