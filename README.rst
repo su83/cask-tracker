@@ -18,16 +18,16 @@ It includes this data about "the data":
 
 - Metadata
 
- - Tags, Properties, Schema for CDAP Datasets and Programs
- - System and User
+  - Tags, Properties, Schema for CDAP Datasets and Programs
+  - System and User
 
 - Data Quality
 
- - Metadata that include feed-level and field-level quality metrics of datasets
+  - Metadata that include feed-level and field-level quality metrics of datasets
 
 - Data Usage Statistics
 
- - Usage statistics of dataset and programs
+  - Usage statistics of dataset and programs
 
 Getting Started
 ===============
