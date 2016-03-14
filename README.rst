@@ -15,13 +15,19 @@ Tracker
 Cask Tracker is one such application built by the team at Cask that provides the ability to track data ingested
 either through Cask Hydrator or a Custom CDAP Application and provide input to data governance processes on a cluster.
 It includes this data about "the data":
+
 - Metadata
--- Tags, Properties, Schema for CDAP Datasets and Programs
--- System and User
+
+ - Tags, Properties, Schema for CDAP Datasets and Programs
+ - System and User
+
 - Data Quality
--- Metadata that include Feed-level and Field-level quality metrics of datasets
+
+ - Metadata that include feed-level and field-level quality metrics of datasets
+
 - Data Usage Statistics
--- Usage statistics of dataset and programs.
+
+ - Usage statistics of dataset and programs
 
 Getting Started
 ===============
@@ -45,7 +51,7 @@ You get started with Tracker by building directly from the latest source code::
   cd cask-tracker
   mvn clean package
 
-After the build completes, you will have a JAR in:
+After the build completes, you will have a JAR in the
 ``./target/`` directory.
 
 You can build without running tests: ``mvn clean package -DskipTests``
@@ -56,16 +62,14 @@ Step 1: Deploy a plugin using the CDAP CLI::
 
   > load artifact target/tracker-<version>.jar
 
-
 Step 2: Create an application configuration file based on the instructions below.
 
 Step 3: Create a CDAP Application by providing the configuration file::
 
-  > create app TrackerApp tracker 1.0.0-SNAPSHOT USER appconfig.txt
+  > create app TrackerApp tracker <version> USER appconfig.txt
 
-
-Configuration File
-------------------
+Application Configuration File
+------------------------------
 Kafka Audit Log reader config (``metadataKafkaConfig``): Kafka Consumer Flowlet configuration information.
 
 Sample Configuration file::
@@ -128,6 +132,3 @@ either express or implied. See the License for the specific language governing p
 and limitations under the License.
 
 Cask is a trademark of Cask Data, Inc. All rights reserved.
-
-Apache, Apache HBase, and HBase are trademarks of The Apache Software Foundation. Used with
-permission. No endorsement by The Apache Software Foundation is implied by the use of these marks.
