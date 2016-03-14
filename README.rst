@@ -70,8 +70,8 @@ Step 3: Create a CDAP Application by providing the configuration file::
 
 Application Configuration File
 ------------------------------
-Create an application configuration file that contains the Kafka Audit Log reader
-configuration (the property metadataKafkaConfig); it is the Kafka Consumer Flowlet configuration information.
+Create an application configuration file that contains the Kafka Audit Log reader configuration (the property
+``metadataKafkaConfig``). It is the Kafka Consumer Flowlet configuration information.
 
 Sample Configuration file::
 
