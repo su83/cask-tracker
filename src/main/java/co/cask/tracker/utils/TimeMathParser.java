@@ -97,7 +97,7 @@ public class TimeMathParser {
   }
 
   /**
-   * Parses a time in String format into a long value
+   * Parses a time in String format into a long value.
    *
    * @param timeStr the string to parse
    * @param timeUnit the unit of time to return, if timeStr is numeric then it is assumed to be in the unit timeUnit
@@ -119,7 +119,7 @@ public class TimeMathParser {
   }
 
   /**
-   * Parses a time in String format into a long value
+   * Parses a time in String format into a long value.
    *
    * @param now the present time in milliseconds
    * @param timeStr the string to parse

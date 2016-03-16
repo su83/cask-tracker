@@ -55,7 +55,6 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
 
   @UseDataSet(TrackerApp.AUDIT_LOG_DATASET_NAME)
   private AuditLogTable auditLogTable;
-
   private String namespace;
 
   @Override
@@ -86,7 +85,8 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
       try {
         startTimeLong = TimeMathParser.parseTimeInSeconds(startTime);
       } catch (IllegalArgumentException e) {
-        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
+        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
+                           "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
         return;
       }
     }
@@ -95,7 +95,8 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
       try {
         endTimeLong = TimeMathParser.parseTimeInSeconds(endTime);
       } catch (IllegalArgumentException e) {
-        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
+        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
+                           "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
         return;
       }
     }

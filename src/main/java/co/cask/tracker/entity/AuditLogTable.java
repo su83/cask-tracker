@@ -65,6 +65,7 @@ public class AuditLogTable extends AbstractDataset {
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
+
   private final Table auditLog;
 
   public AuditLogTable(DatasetSpecification spec, @EmbeddedDataset("auditLog") Table auditLogDataset) {
@@ -95,13 +96,11 @@ public class AuditLogTable extends AbstractDataset {
 
   public void write(AuditMessage auditMessage) throws IOException {
     EntityId entityId = auditMessage.getEntityId();
-    String namespace;
-    String type;
-    String name;
     if (entityId instanceof NamespacedId) {
-      namespace = ((NamespacedId) entityId).getNamespace();
+      String namespace = ((NamespacedId) entityId).getNamespace();
       EntityType entityType = entityId.getEntity();
-      type = entityType.name().toLowerCase();
+      String type = entityType.name().toLowerCase();
+      String name;
       // Unfortunately, there's no generic way to get the name of the entity
       // so we need this switch statement and a bunch of casting.
       switch (entityType) {
@@ -229,7 +228,7 @@ public class AuditLogTable extends AbstractDataset {
   }
 
   /**
-   * A  closable iterator for moving through AuditMessages returned by a scan.
+   * A closable iterator for moving through AuditMessages returned by a scan.
    */
   private static final class AuditMessageIterator extends AbstractCloseableIterator<AuditMessage> {
     private final Scanner scanner;

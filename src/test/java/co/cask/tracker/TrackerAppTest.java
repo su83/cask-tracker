@@ -27,6 +27,7 @@ import co.cask.cdap.proto.audit.payload.metadata.MetadataPayload;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.id.EntityId;
+import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.FlowManager;
 import co.cask.cdap.test.ServiceManager;
@@ -97,9 +98,9 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse("auditlog/stream/stream1?startTime=1456956659467&endTime=1456956659469",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(1,resp.getTotalResults());
-    Assert.assertEquals("stream:default.stream1",
-                        resp.getResults().get(0).getEntityId().toString());
+    Assert.assertEquals(1, resp.getTotalResults());
+    Assert.assertEquals(NamespaceId.DEFAULT.stream("stream1"),
+                        resp.getResults().get(0).getEntityId());
   }
 
   @Test
@@ -107,10 +108,10 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse("auditlog/stream/stream1",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(2,resp.getTotalResults());
+    Assert.assertEquals(2, resp.getTotalResults());
     for (int i = 0; i < resp.getResults().size(); i++) {
-      Assert.assertEquals("stream:default.stream1",
-                          resp.getResults().get(i).getEntityId().toString());
+      Assert.assertEquals(NamespaceId.DEFAULT.stream("stream1"),
+                          resp.getResults().get(i).getEntityId());
     }
   }
 
@@ -119,11 +120,11 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse("auditlog/stream/stream1?offset=1",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(2,resp.getTotalResults());
-    Assert.assertEquals(1,resp.getOffset());
-    Assert.assertEquals(1,resp.getResults().size());
-    Assert.assertEquals("stream:default.stream1",
-                        resp.getResults().get(0).getEntityId().toString());
+    Assert.assertEquals(2, resp.getTotalResults());
+    Assert.assertEquals(1, resp.getOffset());
+    Assert.assertEquals(1, resp.getResults().size());
+    Assert.assertEquals(NamespaceId.DEFAULT.stream("stream1"),
+                        resp.getResults().get(0).getEntityId());
   }
 
   @Test
@@ -131,32 +132,32 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse("auditlog/stream/stream1?limit=1",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
-    Assert.assertEquals(2,resp.getTotalResults());
-    Assert.assertEquals(0,resp.getOffset());
-    Assert.assertEquals(1,resp.getResults().size());
-    Assert.assertEquals("stream:default.stream1",
-                        resp.getResults().get(0).getEntityId().toString());
+    Assert.assertEquals(2, resp.getTotalResults());
+    Assert.assertEquals(0, resp.getOffset());
+    Assert.assertEquals(1, resp.getResults().size());
+    Assert.assertEquals(NamespaceId.DEFAULT.stream("stream1"),
+                        resp.getResults().get(0).getEntityId());
   }
 
   @Test
   public void testInvalidDatesError() throws Exception {
     String response = getServiceResponse("auditlog/stream/stream1?startTime=1&endTime=0",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"startTime must be before endTime.\"",response);
+    Assert.assertEquals("\"startTime must be before endTime.\"", response);
   }
 
   @Test
   public void testInvalidOffset() throws Exception {
     String response = getServiceResponse("auditlog/stream/stream1?offset=-1",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"offset cannot be negative.\"",response);
+    Assert.assertEquals("\"offset cannot be negative.\"", response);
   }
 
   @Test
   public void testInvalidLimit() throws Exception {
     String response = getServiceResponse("auditlog/stream/stream1?limit=-1",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"limit cannot be negative.\"",response);
+    Assert.assertEquals("\"limit cannot be negative.\"", response);
   }
 
   private static ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
@@ -172,7 +173,7 @@ public class TrackerAppTest extends TestBase {
   private String getServiceResponse(String request, int expectedResponseCode) throws Exception {
     URL url = new URL(serviceManager.getServiceURL(), request);
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(expectedResponseCode,connection.getResponseCode());
+    Assert.assertEquals(expectedResponseCode, connection.getResponseCode());
     String response;
     try {
       if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
@@ -192,7 +193,7 @@ public class TrackerAppTest extends TestBase {
   private List<AuditMessage> generateTestData() {
     List<AuditMessage> testData = new ArrayList<>();
     testData.add(new AuditMessage(1456956659468L,
-                                  EntityId.fromString("stream:default.stream1"),
+                                  NamespaceId.DEFAULT.stream("stream1"),
                                   "user1",
                                   AuditType.ACCESS,
                                   new AccessPayload(AccessType.WRITE,
@@ -200,7 +201,7 @@ public class TrackerAppTest extends TestBase {
                  )
     );
     testData.add(new AuditMessage(1456956659469L,
-                                  EntityId.fromString("stream:default.stream1"),
+                                  NamespaceId.DEFAULT.stream("stream1"),
                                   "user1",
                                   AuditType.ACCESS,
                                   new AccessPayload(AccessType.UNKNOWN,

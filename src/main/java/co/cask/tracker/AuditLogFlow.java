@@ -24,6 +24,7 @@ import co.cask.tracker.config.TrackerAppConfig;
  */
 public class AuditLogFlow extends AbstractFlow {
   public static final String FLOW_NAME = "AuditLogFlow";
+
   private final TrackerAppConfig trackerAppConfig;
 
   public AuditLogFlow(TrackerAppConfig trackerAppConfig) {

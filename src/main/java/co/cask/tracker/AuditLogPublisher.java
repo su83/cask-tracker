@@ -41,6 +41,7 @@ public final class AuditLogPublisher extends AbstractFlowlet {
         .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
         .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
         .create();
+
   @UseDataSet(TrackerApp.AUDIT_LOG_DATASET_NAME)
   private AuditLogTable auditLog;
 
