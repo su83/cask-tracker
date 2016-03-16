@@ -25,11 +25,12 @@ import co.cask.tracker.entity.AuditLogTable;
  * CDAP Application and provide input to data governance process on cluster.
  */
 public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
+  public static final String APP_NAME = "Tracker";
   public static final String AUDIT_LOG_DATASET_NAME = "AuditLog";
 
   @Override
   public void configure() {
-    setName("Tracker");
+    setName(APP_NAME);
     setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
     createDataset(AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
     addFlow(new AuditLogFlow(getConfig()));

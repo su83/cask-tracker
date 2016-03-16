@@ -26,6 +26,7 @@ import co.cask.tracker.config.TrackerAppConfig;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import org.apache.twill.kafka.client.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,5 +118,13 @@ public final class MetadataConsumer extends Kafka08ConsumerFlowlet<ByteBuffer, S
   @Override
   protected void processMessage(String metadataKafkaMessage) throws Exception {
     emitter.emit(metadataKafkaMessage);
+  }
+
+  /**
+   * Overriding the default Returns the key to be used when persisting offsets into a {@link KeyValueTable}.
+   */
+  @Override
+  protected String getStoreKey(TopicPartition topicPartition) {
+    return TrackerApp.APP_NAME + ":" + topicPartition.getTopic() + ":" + topicPartition.getPartition();
   }
 }
