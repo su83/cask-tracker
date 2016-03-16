@@ -181,7 +181,7 @@ public class TrackerAppTest extends TestBase {
       } else if (connection.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
         response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
       } else {
-        throw new Exception("Invalid response code returned: "+connection.getResponseCode());
+        throw new Exception("Invalid response code returned: " + connection.getResponseCode());
       }
     } finally {
       connection.disconnect();
