@@ -59,7 +59,7 @@ import java.util.UUID;
 /**
  * Creates the key and scan key for storing data in the AuditLog table.
  */
-public class AuditLogTable extends AbstractDataset {
+public final class AuditLogTable extends AbstractDataset {
   private static final String DEFAULT_USER = "unknown";
   private static final Gson GSON = new GsonBuilder()
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
