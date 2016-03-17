@@ -14,22 +14,8 @@
  * the License.
  */
 
-package co.cask.tracker.config;
-
-import co.cask.cdap.api.Config;
-import co.cask.tracker.TrackerApp;
-
 /**
- * The configuration for the {@link TrackerApp}. Currently only used for the Kafka config.
+ * The entities required by the TrackerApp.
  */
-public class TrackerAppConfig extends Config {
-  private final MetadataKafkaConfig metadataKafkaConfig;
 
-  public TrackerAppConfig(MetadataKafkaConfig metadataKafkaConfig) {
-    this.metadataKafkaConfig = metadataKafkaConfig;
-  }
-
-  public MetadataKafkaConfig getMetadataKafkaConfig() {
-    return metadataKafkaConfig;
-  }
-}
+package co.cask.tracker.utils;

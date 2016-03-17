@@ -14,22 +14,21 @@
  * the License.
  */
 
-package co.cask.tracker.config;
+package co.cask.tracker;
 
-import co.cask.cdap.api.Config;
-import co.cask.tracker.TrackerApp;
+import co.cask.cdap.api.app.AbstractApplication;
+import co.cask.tracker.entity.AuditLogTable;
 
 /**
- * The configuration for the {@link TrackerApp}. Currently only used for the Kafka config.
+ * This app is used to test the AuditLog flowlet.
  */
-public class TrackerAppConfig extends Config {
-  private final MetadataKafkaConfig metadataKafkaConfig;
-
-  public TrackerAppConfig(MetadataKafkaConfig metadataKafkaConfig) {
-    this.metadataKafkaConfig = metadataKafkaConfig;
-  }
-
-  public MetadataKafkaConfig getMetadataKafkaConfig() {
-    return metadataKafkaConfig;
+public class TestAuditLogPublisherApp extends AbstractApplication {
+  @Override
+  public void configure() {
+    setName("TestAuditLogPublisherApp");
+    setDescription("A temp app to test the AuditLogPublisher flowlet");
+    createDataset(TrackerApp.AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
+    addFlow(new StreamToAuditLogFlow());
+    addService(new AuditLogService());
   }
 }

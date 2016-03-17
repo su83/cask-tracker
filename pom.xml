@@ -28,11 +28,28 @@
   <properties>
     <app.main.class>co.cask.tracker.TrackerApp</app.main.class>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <cdap.version>3.3.1</cdap.version>
+    <cdap.version>3.4.0-SNAPSHOT</cdap.version>
     <slf4j.version>1.7.5</slf4j.version>
     <guava.version>13.0.1</guava.version>
     <junit.version>4.11</junit.version>
+    <kafka.pack.version>0.9.0</kafka.pack.version>
+    <commons.codec.version>1.4</commons.codec.version>
+    <commons.net.version>3.1</commons.net.version>
+    <httpcomponents.client.version>4.2.5</httpcomponents.client.version>
+    <netty.version>3.6.6.Final</netty.version>
+    <maven-compiler.version>3.1</maven-compiler.version>
+    <maven-compiler-source.version>1.7</maven-compiler-source.version>
+    <maven-bundle.version>2.3.7</maven-bundle.version>
+    <maven-surefire.version>2.14.1</maven-surefire.version>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>oss.sonatype.snapshots</id>
+      <name>OSS Sonatype Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+  </repositories>
 
   <dependencies>
     <dependency>
@@ -51,6 +68,10 @@
           <groupId>asm</groupId>
           <artifactId>asm</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.scala-lang</groupId>
+          <artifactId>scala-library</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -58,6 +79,11 @@
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>log4j-over-slf4j</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -69,12 +95,21 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>co.cask.cdap</groupId>
-      <artifactId>cdap-common</artifactId>
-      <version>3.3.1</version>
+      <artifactId>cdap-kafka-flow-compat-0.8</artifactId>
+      <version>${kafka.pack.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>co.cask.cdap</groupId>
+      <artifactId>cdap-proto</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>${netty.version}</version>
     </dependency>
   </dependencies>
 
@@ -84,16 +119,15 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.1</version>
+          <version>${maven-compiler.version}</version>
           <configuration>
-            <source>1.7</source>
-            <target>1.7</target>
+            <source>${maven-compiler-source.version}</source>
+            <target>${maven-compiler-source.version}</target>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.3.7</version>
           <extensions>true</extensions>
           <configuration>
             <archive>
@@ -116,6 +150,28 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.12.1</version>
+          <executions>
+            <execution>
+              <id>validate</id>
+              <phase>process-test-classes</phase>
+              <configuration>
+                <configLocation>checkstyle.xml</configLocation>
+                <suppressionsLocation>suppressions.xml</suppressionsLocation>
+                <encoding>UTF-8</encoding>
+                <consoleOutput>true</consoleOutput>
+                <failsOnError>true</failsOnError>
+                <includeTestSourceDirectory>true</includeTestSourceDirectory>
+              </configuration>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -123,12 +179,17 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.14.1</version>
+        <version>${maven-surefire.version}</version>
       </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.3.7</version>
+        <version>${maven-bundle.version}</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.12.1</version>
       </plugin>
     </plugins>
   </build>

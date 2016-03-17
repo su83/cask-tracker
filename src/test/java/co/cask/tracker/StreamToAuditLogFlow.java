@@ -14,22 +14,22 @@
  * the License.
  */
 
-package co.cask.tracker.config;
+package co.cask.tracker;
 
-import co.cask.cdap.api.Config;
-import co.cask.tracker.TrackerApp;
+import co.cask.cdap.api.flow.AbstractFlow;
 
 /**
- * The configuration for the {@link TrackerApp}. Currently only used for the Kafka config.
+ * This class is used to create a test flow connecting the Generator to the AuditLog Flowlet.
  */
-public class TrackerAppConfig extends Config {
-  private final MetadataKafkaConfig metadataKafkaConfig;
+public class StreamToAuditLogFlow extends AbstractFlow {
+  public static final String FLOW_NAME = "StreamToAuditLogFlow";
 
-  public TrackerAppConfig(MetadataKafkaConfig metadataKafkaConfig) {
-    this.metadataKafkaConfig = metadataKafkaConfig;
-  }
-
-  public MetadataKafkaConfig getMetadataKafkaConfig() {
-    return metadataKafkaConfig;
+  @Override
+  public void configure() {
+    setName(FLOW_NAME);
+    setDescription("A temp flow to test the audit log");
+    addStream("testStream");
+    addFlowlet("auditLogPublisher", new AuditLogPublisher());
+    connectStream("testStream", "auditLogPublisher");
   }
 }
