@@ -16,13 +16,14 @@
 
 package co.cask.tracker.config;
 
+import co.cask.tracker.AuditLogConsumer;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 /**
- * Configuration for Metadata Kafka subscription used by {@link co.cask.tracker.MetadataConsumer}.
+ * Configuration for Audit Log Kafka subscription used by {@link AuditLogConsumer}.
  */
-public class MetadataKafkaConfig {
+public class AuditLogKafkaConfig {
 
   private static final String DEFAULT_OFFSET_DATASET = "kafkaOffset";
   private static final String DEFAULT_TOPIC = "audit";
@@ -35,7 +36,7 @@ public class MetadataKafkaConfig {
 
   private final String offsetDataset;
 
-  public MetadataKafkaConfig(String zookeeperString, String brokerString,
+  public AuditLogKafkaConfig(String zookeeperString, String brokerString,
                              String topic, int numPartitions, String offsetDataset) {
     this.zookeeperString = zookeeperString;
     this.brokerString = brokerString;
