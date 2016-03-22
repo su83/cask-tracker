@@ -40,8 +40,7 @@ Audit Publishing to Kafka
 -------------------------
 The Tracker App contains a flow that subscribes to the Kafka topic to which CDAP publishes
 the audit updates. Before using this application, you should enable publishing of audit updates to
-Kafka as described in the CDAP documentation `Enable Metadata Update Notifications
-<http://docs.cask.co/cdap/current/en/developers-manual/building-blocks/metadata-lineage.html#metadata-update-notifications>`__.
+Kafka by setting the ``audit.enabled`` option in your cdap-site.xml to ``true``.
 
 Building Cask Tracker
 ---------------------
@@ -70,19 +69,19 @@ Step 3: Create a CDAP application using the configuration file::
 Application Configuration File
 ------------------------------
 Create an application configuration file that contains the Kafka Audit Log reader configuration (the property
-``metadataKafkaConfig``). It is the Kafka Consumer Flowlet configuration information.
+``auditLogKafkaConfig``). It is the Kafka Consumer Flowlet configuration information.
 
 Sample configuration file::
 
   {
     "config": {
-      "metadataKafkaConfig": {
+      "auditLogKafkaConfig": {
         "zookeeperString": "hostname:2181/cdap/kafka"
       }
     }
   }
 
-**Metadata Kafka Config:**
+**Audit Log Kafka Config:**
 
 This key contains a property map with:
 

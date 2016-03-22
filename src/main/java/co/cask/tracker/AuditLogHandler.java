@@ -22,13 +22,9 @@ import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.proto.audit.AuditMessage;
-import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
-import co.cask.cdap.proto.id.EntityId;
 import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.utils.TimeMathParser;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.ArrayList;
@@ -45,9 +41,6 @@ import javax.ws.rs.QueryParam;
  * This class handles requests to the AuditLog API.
  */
 public final class AuditLogHandler extends AbstractHttpServiceHandler {
-  private static final Gson GSON = new GsonBuilder()
-    .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
-    .create();
   private static final String DEFAULT_PAGE_SIZE = "10";
   private static final long DEFAULT_START_TIME = 0L;
   // If we scan more than this + offset, we return early since the UI can't display that many anyway.

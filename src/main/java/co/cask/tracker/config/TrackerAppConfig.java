@@ -23,13 +23,13 @@ import co.cask.tracker.TrackerApp;
  * The configuration for the {@link TrackerApp}. Currently only used for the Kafka config.
  */
 public class TrackerAppConfig extends Config {
-  private final MetadataKafkaConfig metadataKafkaConfig;
+  private final AuditLogKafkaConfig auditLogKafkaConfig;
 
-  public TrackerAppConfig(MetadataKafkaConfig metadataKafkaConfig) {
-    this.metadataKafkaConfig = metadataKafkaConfig;
+  public TrackerAppConfig(AuditLogKafkaConfig auditLogKafkaConfig) {
+    this.auditLogKafkaConfig = auditLogKafkaConfig;
   }
 
-  public MetadataKafkaConfig getMetadataKafkaConfig() {
-    return metadataKafkaConfig;
+  public AuditLogKafkaConfig getAuditLogKafkaConfig() {
+    return auditLogKafkaConfig;
   }
 }
