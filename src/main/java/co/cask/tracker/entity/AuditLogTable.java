@@ -60,11 +60,14 @@ import java.util.UUID;
  * Creates the key and scan key for storing data in the AuditLog table.
  */
 public final class AuditLogTable extends AbstractDataset {
+  // Using an unprintable character to delimit elements of key
+  private static final String KEY_DELIMITER = "\1";
   private static final String DEFAULT_USER = "unknown";
   private static final Gson GSON = new GsonBuilder()
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
+
 
   private final Table auditLog;
 
@@ -87,9 +90,10 @@ public final class AuditLogTable extends AbstractDataset {
                       String entityName,
                       long startTime,
                       long endTime) {
+    // Data stored using inverted timestamp so start adn end times are swapped
     Scanner scanner = auditLog.scan(
-      new Scan(getScanKey(namespace, entityType, entityName, startTime),
-               getScanKey(namespace, entityType, entityName, endTime))
+      new Scan(getScanKey(namespace, entityType, entityName, endTime),
+               getScanKey(namespace, entityType, entityName, startTime))
     );
     return new AuditMessageIterator(scanner);
   }
@@ -174,16 +178,16 @@ public final class AuditLogTable extends AbstractDataset {
    * @param timestamp the timestamp of the entity to search for
    * @return A string that can be used as a key in the dataset
    */
-  private String getKey(String namespace,
+  private byte[] getKey(String namespace,
                         String entityType,
                         String entityName,
                         long timestamp) {
-    return String.format("%s-%s-%s-%s-%s",
-                         namespace,
-                         entityType,
-                         entityName,
-                         timestamp,
-                         UUID.randomUUID().toString());
+    byte[] key = createEntityKeyPart(namespace, entityType, entityName);
+    key = Bytes.add(key, Bytes.toBytes(getInvertedTsKeyPart(timestamp)));
+    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
+    String uuid = UUID.randomUUID().toString();
+    key = Bytes.add(key, Bytes.toBytes(uuid.length()), Bytes.toBytes(uuid));
+    return key;
   }
 
   /**
@@ -198,7 +202,35 @@ public final class AuditLogTable extends AbstractDataset {
                             String entityType,
                             String entityName,
                             long timestamp) {
-    return Bytes.toBytes(String.format("%s-%s-%s-%s", namespace, entityType, entityName, timestamp));
+    byte[] key = createEntityKeyPart(namespace, entityType, entityName);
+    key = Bytes.add(key, Bytes.toBytes(getInvertedTsScanKeyPart(timestamp)));
+    return key;
+  }
+
+  // Builds the common first part of the key and scan key
+  private byte[] createEntityKeyPart(String namespace, String entityType, String entityName) {
+    byte[] key = new byte[0];
+    key = Bytes.add(key, Bytes.toBytes(namespace));
+    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
+    key = Bytes.add(key, Bytes.toBytes(entityType));
+    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
+    key = Bytes.add(key, Bytes.toBytes(entityName));
+    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
+    return key;
+  }
+
+  private long getInvertedTsKeyPart(long endTime) {
+    return Long.MAX_VALUE - endTime;
+  }
+
+  /**
+   * Returns inverted scan key for given time. The scan key needs to be adjusted to maintain the property that
+   * start key is inclusive and end key is exclusive on a scan. Since when you invert start key, it becomes end key and
+   * vice-versa.
+   */
+  private long getInvertedTsScanKeyPart(long time) {
+    long invertedTsKey = getInvertedTsKeyPart(time);
+    return invertedTsKey < Long.MAX_VALUE ? invertedTsKey + 1 : invertedTsKey;
   }
 
   /**

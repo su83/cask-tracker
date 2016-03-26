@@ -30,6 +30,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -76,17 +77,17 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     long startTimeLong = DEFAULT_START_TIME;
     if (startTime != null) {
       try {
-        startTimeLong = TimeMathParser.parseTimeInSeconds(startTime);
+        startTimeLong = TimeMathParser.parseTime(startTime, TimeUnit.MILLISECONDS);
       } catch (IllegalArgumentException e) {
         responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
                            "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
         return;
       }
     }
-    long endTimeLong = TimeMathParser.nowInSeconds();
+    long endTimeLong = System.currentTimeMillis();
     if (endTime != null) {
       try {
-        endTimeLong = TimeMathParser.parseTimeInSeconds(endTime);
+        endTimeLong = TimeMathParser.parseTime(endTime, TimeUnit.MILLISECONDS);
       } catch (IllegalArgumentException e) {
         responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
                            "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
