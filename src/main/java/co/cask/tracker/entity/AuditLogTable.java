@@ -68,7 +68,6 @@ public final class AuditLogTable extends AbstractDataset {
     .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
     .create();
 
-
   private final Table auditLog;
 
   public AuditLogTable(DatasetSpecification spec, @EmbeddedDataset("auditLog") Table auditLogDataset) {
