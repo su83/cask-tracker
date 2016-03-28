@@ -95,7 +95,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testSingleResult() throws Exception {
-    String response = getServiceResponse("auditlog/stream/stream1?startTime=1456956659468&endTime=1456956659469",
+    String response = getServiceResponse("auditlog/stream/stream1?startTime=1456956659467&endTime=1456956659469",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse resp = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertEquals(1, resp.getTotalResults());

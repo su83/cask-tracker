@@ -54,6 +54,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 /**
@@ -61,7 +62,7 @@ import java.util.UUID;
  */
 public final class AuditLogTable extends AbstractDataset {
   // Using an unprintable character to delimit elements of key
-  private static final String KEY_DELIMITER = "\1";
+  private static final byte[] KEY_DELIMITER = Bytes.toBytes("\1");
   private static final String DEFAULT_USER = "unknown";
   private static final Gson GSON = new GsonBuilder()
     .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
@@ -89,7 +90,7 @@ public final class AuditLogTable extends AbstractDataset {
                       String entityName,
                       long startTime,
                       long endTime) {
-    // Data stored using inverted timestamp so start adn end times are swapped
+    // Data stored using inverted timestamp so start and end times are swapped
     Scanner scanner = auditLog.scan(
       new Scan(getScanKey(namespace, entityType, entityName, endTime),
                getScanKey(namespace, entityType, entityName, startTime))
@@ -181,12 +182,18 @@ public final class AuditLogTable extends AbstractDataset {
                         String entityType,
                         String entityName,
                         long timestamp) {
-    byte[] key = createEntityKeyPart(namespace, entityType, entityName);
-    key = Bytes.add(key, Bytes.toBytes(getInvertedTsKeyPart(timestamp)));
-    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
     String uuid = UUID.randomUUID().toString();
-    key = Bytes.add(key, Bytes.toBytes(uuid.length()), Bytes.toBytes(uuid));
-    return key;
+    int byteBufferSize = namespace.length() +
+                         entityType.length() +
+                         entityName.length() +
+                         Bytes.SIZEOF_LONG +
+                         uuid.length() +
+                         (4 * KEY_DELIMITER.length);
+    ByteBuffer bb = createEntityKeyPart(byteBufferSize, namespace, entityType, entityName);
+    bb.putLong(getInvertedTsKeyPart(timestamp))
+      .put(KEY_DELIMITER)
+      .put(Bytes.toBytes(uuid));
+    return bb.array();
   }
 
   /**
@@ -201,21 +208,33 @@ public final class AuditLogTable extends AbstractDataset {
                             String entityType,
                             String entityName,
                             long timestamp) {
-    byte[] key = createEntityKeyPart(namespace, entityType, entityName);
-    key = Bytes.add(key, Bytes.toBytes(getInvertedTsScanKeyPart(timestamp)));
-    return key;
+    int byteBufferSize = namespace.length() +
+                         entityType.length() +
+                         entityName.length() +
+                         Bytes.SIZEOF_LONG +
+                         (3 * KEY_DELIMITER.length);
+    ByteBuffer bb = createEntityKeyPart(byteBufferSize, namespace, entityType, entityName);
+    bb.putLong(getInvertedTsScanKeyPart(timestamp));
+    return bb.array();
   }
 
-  // Builds the common first part of the key and scan key
-  private byte[] createEntityKeyPart(String namespace, String entityType, String entityName) {
-    byte[] key = new byte[0];
-    key = Bytes.add(key, Bytes.toBytes(namespace));
-    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
-    key = Bytes.add(key, Bytes.toBytes(entityType));
-    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
-    key = Bytes.add(key, Bytes.toBytes(entityName));
-    key = Bytes.add(key, Bytes.toBytes(KEY_DELIMITER));
-    return key;
+  /**
+   * Builds the common first part of the key and scan key
+   * @param byteBufferSize initial size to allocate for the ByteBuffer
+   * @param namespace Entity namespace
+   * @param entityType Entity Type
+   * @param entityName Entity Name
+   * @return a ByteBuffer allocated to byteBufferSize with entity elements put in
+   */
+  private ByteBuffer createEntityKeyPart(int byteBufferSize, String namespace, String entityType, String entityName) {
+    ByteBuffer bb = ByteBuffer.allocate(byteBufferSize);
+    bb.put(Bytes.toBytes(namespace))
+      .put(KEY_DELIMITER)
+      .put(Bytes.toBytes(entityType))
+      .put(KEY_DELIMITER)
+      .put(Bytes.toBytes(entityName))
+      .put(KEY_DELIMITER);
+    return bb;
   }
 
   private long getInvertedTsKeyPart(long endTime) {
