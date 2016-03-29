@@ -113,6 +113,8 @@ public class TrackerAppTest extends TestBase {
       Assert.assertEquals(NamespaceId.DEFAULT.stream("stream1"),
                           resp.getResults().get(i).getEntityId());
     }
+    // Assert the results are sorted most recent timestamp first
+    Assert.assertTrue(resp.getResults().get(0).getTime() > resp.getResults().get(1).getTime());
   }
 
   @Test
