@@ -181,6 +181,7 @@ public class TrackerAppTest extends TestBase {
                                          HttpResponseStatus.OK.getCode());
     TopEntitiesResult[] results = GSON.fromJson(response, TopEntitiesResult[].class);
     Assert.assertEquals(3, results.length);
+    Assert.assertTrue(results[0].getColumnValues().get("count") > results[1].getColumnValues().get("count"));
   }
 
   private static ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
@@ -248,8 +249,12 @@ public class TrackerAppTest extends TestBase {
                                   EntityId.fromString("dataset:default.ds1"),
                                   "user1",
                                   AuditType.CREATE,
-                                  AuditPayload.EMPTY_PAYLOAD)
-    );
+                                  AuditPayload.EMPTY_PAYLOAD));
+    testData.add(new AuditMessage(1456956659472L,
+                                  EntityId.fromString("dataset:default.ds1"),
+                                  "user1",
+                                  AuditType.CREATE,
+                                  AuditPayload.EMPTY_PAYLOAD));
     return testData;
   }
 }

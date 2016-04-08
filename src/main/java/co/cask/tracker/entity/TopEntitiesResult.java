@@ -26,13 +26,13 @@ public class TopEntitiesResult implements Comparable<TopEntitiesResult> {
   private final String namespace;
   private final String entityType;
   private final String entityName;
-  private final Map<String, Long> accessTypes;
+  private final Map<String, Long> columnValues;
 
   public TopEntitiesResult(String namespace, String entityType, String entityName) {
     this.namespace = namespace;
     this.entityType = entityType;
     this.entityName = entityName;
-    this.accessTypes = new HashMap<>();
+    this.columnValues = new HashMap<>();
   }
 
   public String getNamespace() {
@@ -47,16 +47,16 @@ public class TopEntitiesResult implements Comparable<TopEntitiesResult> {
     return entityName;
   }
 
-  public Map<String, Long> getAccessTypes() {
-    return accessTypes;
+  public Map<String, Long> getColumnValues() {
+    return columnValues;
   }
 
   public void addAccessType(String type, long value) {
-    this.accessTypes.put(type, value);
+    this.columnValues.put(type, value);
   }
 
   @Override
   public int compareTo(TopEntitiesResult o) {
-    return this.getAccessTypes().get("count").compareTo(o.getAccessTypes().get("count"));
+    return o.getColumnValues().get("count").compareTo(this.getColumnValues().get("count"));
   }
 }

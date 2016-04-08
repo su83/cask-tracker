@@ -53,5 +53,6 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
                     .build());
     addFlow(new AuditLogFlow(getConfig()));
     addService(new AuditLogService());
+    addService(new AuditMetricsService());
   }
 }
