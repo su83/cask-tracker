@@ -82,7 +82,8 @@ public class AuditMetricsCube extends AbstractDataset {
       if (auditMessage.getPayload() instanceof AccessPayload) {
         AccessPayload accessPayload = ((AccessPayload) auditMessage.getPayload());
         String programName = EntityIdHelper.getEntityName(accessPayload.getAccessor());
-        fact.addDimensionValue("entity_type", programName);
+        fact.addDimensionValue("program_name", programName);
+        fact.addDimensionValue("program_type", accessPayload.getAccessor().getEntity().name().toLowerCase());
         fact.addMeasurement(accessPayload.getAccessType().name(), MeasureType.COUNTER, 1L);
         // Adds column for READ/WRITE/UNKNOWN access
         fact.addMeasurement(accessPayload.getAccessType().name().toLowerCase(), MeasureType.COUNTER, 1L);

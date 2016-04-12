@@ -49,7 +49,8 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
                     .add("dataset.cube.resolutions", resolutions)
                     .add("dataset.cube.aggregation.agg1.dimensions", "namespace")
                     .add("dataset.cube.aggregation.agg2.dimensions", "namespace,entity_type,entity_name")
-                    .add("dataset.cube.aggregation.agg3.dimensions", "namespace,entity_type,entity_name,program")
+                    .add("dataset.cube.aggregation.agg3.dimensions",
+                         "namespace,entity_type,entity_name,program_type,program_name")
                     .build());
     addFlow(new AuditLogFlow(getConfig()));
     addService(new AuditLogService());

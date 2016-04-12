@@ -177,7 +177,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testTopNEntities() throws Exception {
     String response = getServiceResponse(auditMetricsServiceManager,
-                                         "auditmetrics/topEntities?limit=3",
+                                         "v1/auditmetrics/topEntities?limit=3",
                                          HttpResponseStatus.OK.getCode());
     TopEntitiesResult[] results = GSON.fromJson(response, TopEntitiesResult[].class);
     Assert.assertEquals(3, results.length);
@@ -251,6 +251,11 @@ public class TrackerAppTest extends TestBase {
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
     testData.add(new AuditMessage(1456956659472L,
+                                  EntityId.fromString("dataset:default.ds1"),
+                                  "user1",
+                                  AuditType.CREATE,
+                                  AuditPayload.EMPTY_PAYLOAD));
+    testData.add(new AuditMessage(1456956659473L,
                                   EntityId.fromString("dataset:default.ds1"),
                                   "user1",
                                   AuditType.CREATE,

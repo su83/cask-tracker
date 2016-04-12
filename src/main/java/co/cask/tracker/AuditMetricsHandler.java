@@ -43,7 +43,7 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
     namespace = context.getNamespace();
   }
 
-  @Path("auditmetrics/topEntities")
+  @Path("v1/auditmetrics/topEntities")
   @GET
   public void query(HttpServiceRequest request, HttpServiceResponder responder,
                     @QueryParam("limit") @DefaultValue("10") int limit) {
