@@ -34,7 +34,7 @@ Getting Started
 
 Prerequisites
 -------------
-To use the 1.0.x version of Tracker, you must have CDAP version 3.4.x or higher.
+To use the 0.2.0 version of Tracker, you must have CDAP version 3.4.x or higher.
 
 Audit Publishing to Kafka
 -------------------------
