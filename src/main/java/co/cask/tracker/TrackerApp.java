@@ -26,7 +26,7 @@ import co.cask.tracker.entity.AuditLogTable;
  */
 public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public static final String APP_NAME = "Tracker";
-  public static final String AUDIT_LOG_DATASET_NAME = "_AuditLog";
+  public static final String AUDIT_LOG_DATASET_NAME = "_auditLog";
 
   @Override
   public void configure() {
