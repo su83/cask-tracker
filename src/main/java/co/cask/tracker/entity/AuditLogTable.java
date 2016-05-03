@@ -36,13 +36,13 @@ import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.cdap.proto.id.ApplicationId;
+import co.cask.cdap.proto.id.ArtifactId;
 import co.cask.cdap.proto.id.DatasetId;
 import co.cask.cdap.proto.id.DatasetModuleId;
 import co.cask.cdap.proto.id.DatasetTypeId;
 import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.FlowletId;
 import co.cask.cdap.proto.id.FlowletQueueId;
-import co.cask.cdap.proto.id.NamespacedArtifactId;
 import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.cdap.proto.id.NotificationFeedId;
 import co.cask.cdap.proto.id.ProgramId;
@@ -112,7 +112,7 @@ public final class AuditLogTable extends AbstractDataset {
           name = ((ApplicationId) entityId).getApplication();
           break;
         case ARTIFACT:
-          name = ((NamespacedArtifactId) entityId).getArtifact();
+          name = ((ArtifactId) entityId).getArtifact();
           break;
         case DATASET:
           name = ((DatasetId) entityId).getDataset();
