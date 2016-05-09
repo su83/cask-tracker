@@ -24,6 +24,8 @@
   <packaging>jar</packaging>
 
   <name>Tracker App</name>
+  <description>CDAP Extension that provides the ability to track data changes and provide input to data governance processes on a cluster</description>
+  <url>http://github.com/caskdata/cask-tracker</url>
 
   <properties>
     <app.main.class>co.cask.tracker.TrackerApp</app.main.class>
