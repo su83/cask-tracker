@@ -80,7 +80,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
         startTimeLong = TimeMathParser.parseTime(startTime, TimeUnit.MILLISECONDS);
       } catch (IllegalArgumentException e) {
         responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
-                           "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
+                "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
         return;
       }
     }
@@ -90,7 +90,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
         endTimeLong = TimeMathParser.parseTime(endTime, TimeUnit.MILLISECONDS);
       } catch (IllegalArgumentException e) {
         responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
-                           "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
+                "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
         return;
       }
     }
@@ -102,10 +102,10 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     int totalResults = 0;
     AuditMessage message;
     CloseableIterator<AuditMessage> messageIter = auditLogTable.scan(namespace,
-                                                                     entityType,
-                                                                     name,
-                                                                     startTimeLong,
-                                                                     endTimeLong);
+            entityType,
+            name,
+            startTimeLong,
+            endTimeLong);
     try {
       // First skip to the offset
       if (offset > 0) {
