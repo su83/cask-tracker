@@ -1,3 +1,4 @@
+
 /*
  * Copyright © 2016 Cask Data, Inc.
  *
@@ -17,7 +18,11 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
+import co.cask.cdap.api.dataset.DatasetProperties;
 import co.cask.tracker.entity.AuditLogTable;
+import co.cask.tracker.entity.AuditMetricsCube;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * This app is used to test the AuditLog flowlet.
@@ -28,7 +33,22 @@ public class TestAuditLogPublisherApp extends AbstractApplication {
     setName("TestAuditLogPublisherApp");
     setDescription("A temp app to test the AuditLogPublisher flowlet");
     createDataset(TrackerApp.AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
+    String resolutions = String.format("%s,%s,%s,%s",
+            TimeUnit.MINUTES.toSeconds(1L),
+            TimeUnit.HOURS.toSeconds(1L),
+            TimeUnit.DAYS.toSeconds(1L),
+            TimeUnit.DAYS.toSeconds(365L));
+    createDataset(TrackerApp.AUDIT_METRICS_DATASET_NAME,
+            AuditMetricsCube.class,
+            DatasetProperties.builder()
+                    .add("dataset.cube.resolutions", resolutions)
+                    .add("dataset.cube.aggregation.agg1.dimensions",
+                            "namespace,entity_type,entity_name,audit_type")
+                    .add("dataset.cube.aggregation.agg2.dimensions",
+                            "namespace,entity_type,entity_name,audit_type,program_name,app_name")
+                    .build());
     addFlow(new StreamToAuditLogFlow());
     addService(new AuditLogService());
+    addService(new AuditMetricsService());
   }
 }

@@ -35,27 +35,17 @@ import co.cask.cdap.proto.audit.payload.metadata.MetadataPayload;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.element.EntityType;
-import co.cask.cdap.proto.id.ApplicationId;
-import co.cask.cdap.proto.id.ArtifactId;
-import co.cask.cdap.proto.id.DatasetId;
-import co.cask.cdap.proto.id.DatasetModuleId;
-import co.cask.cdap.proto.id.DatasetTypeId;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.id.FlowletId;
-import co.cask.cdap.proto.id.FlowletQueueId;
 import co.cask.cdap.proto.id.NamespacedId;
-import co.cask.cdap.proto.id.NotificationFeedId;
-import co.cask.cdap.proto.id.ProgramId;
-import co.cask.cdap.proto.id.ProgramRunId;
-import co.cask.cdap.proto.id.ScheduleId;
-import co.cask.cdap.proto.id.StreamId;
-import co.cask.cdap.proto.id.StreamViewId;
+import co.cask.tracker.utils.EntityIdHelper;
+import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+
 
 /**
  * Creates the key and scan key for storing data in the AuditLog table.
@@ -65,9 +55,9 @@ public final class AuditLogTable extends AbstractDataset {
   private static final byte[] KEY_DELIMITER = Bytes.toBytes("\1");
   private static final String DEFAULT_USER = "unknown";
   private static final Gson GSON = new GsonBuilder()
-    .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
-    .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
-    .create();
+          .registerTypeAdapter(AuditMessage.class, new AuditMessageTypeAdapter())
+          .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
+          .create();
 
   private final Table auditLog;
 
@@ -86,14 +76,14 @@ public final class AuditLogTable extends AbstractDataset {
    * @return
    */
   public CloseableIterator<AuditMessage> scan(String namespace,
-                      String entityType,
-                      String entityName,
-                      long startTime,
-                      long endTime) {
+                                              String entityType,
+                                              String entityName,
+                                              long startTime,
+                                              long endTime) {
     // Data stored using inverted timestamp so start and end times are swapped
     Scanner scanner = auditLog.scan(
-      new Scan(getScanKey(namespace, entityType, entityName, endTime),
-               getScanKey(namespace, entityType, entityName, startTime))
+            new Scan(getScanKey(namespace, entityType, entityName, endTime),
+                    getScanKey(namespace, entityType, entityName, startTime))
     );
     return new AuditMessageIterator(scanner);
   }
@@ -103,72 +93,29 @@ public final class AuditLogTable extends AbstractDataset {
     if (entityId instanceof NamespacedId) {
       String namespace = ((NamespacedId) entityId).getNamespace();
       EntityType entityType = entityId.getEntity();
+      AuditType auditType = auditMessage.getType();
       String type = entityType.name().toLowerCase();
-      String name;
-      // Unfortunately, there's no generic way to get the name of the entity
-      // so we need this switch statement and a bunch of casting.
-      switch (entityType) {
-        case APPLICATION:
-          name = ((ApplicationId) entityId).getApplication();
-          break;
-        case ARTIFACT:
-          name = ((ArtifactId) entityId).getArtifact();
-          break;
-        case DATASET:
-          name = ((DatasetId) entityId).getDataset();
-          break;
-        case DATASET_MODULE:
-          name = ((DatasetModuleId) entityId).getModule();
-          break;
-        case DATASET_TYPE:
-          name = ((DatasetTypeId) entityId).getType();
-          break;
-        case FLOWLET:
-          name = ((FlowletId) entityId).getFlowlet();
-          break;
-        case FLOWLET_QUEUE:
-          name = ((FlowletQueueId) entityId).getQueue();
-          break;
-        case NOTIFICATION_FEED:
-          name = ((NotificationFeedId) entityId).getFeed();
-          break;
-        case PROGRAM:
-          name = ((ProgramId) entityId).getProgram();
-          break;
-        case PROGRAM_RUN:
-          name = ((ProgramRunId) entityId).getRun();
-          break;
-        case SCHEDULE:
-          name = ((ScheduleId) entityId).getSchedule();
-          break;
-        case STREAM:
-          name = ((StreamId) entityId).getStream();
-          break;
-        case STREAM_VIEW:
-          name = ((StreamViewId) entityId).getView();
-          break;
-        default:
-          throw new IOException("Unknown entity type: " + entityType);
-      }
+      String name = EntityIdHelper.getEntityName(entityId);
       String user = auditMessage.getUser();
-      if (user == null || user.isEmpty()) {
+      if (Strings.isNullOrEmpty(user)) {
         user = DEFAULT_USER;
       }
       // The key allows for scanning by namespace, entity, and time. A UUID
       // is added to ensure the key is unique.
       auditLog.put(
-        new Put(getKey(namespace, type, name, auditMessage.getTime()))
-          .add("timestamp", auditMessage.getTime())
-          .add("entityId", GSON.toJson(auditMessage.getEntityId()))
-          .add("user", user)
-          .add("actionType", auditMessage.getType().name())
-          .add("entityType", type)
-          .add("entityName", name)
-          .add("metadata", GSON.toJson(auditMessage.getPayload())));
+              new Put(getKey(namespace, type, name, auditMessage.getTime()))
+                      .add("timestamp", auditMessage.getTime())
+                      .add("entityId", GSON.toJson(auditMessage.getEntityId()))
+                      .add("user", user)
+                      .add("actionType", auditType.name())
+                      .add("entityType", type)
+                      .add("entityName", name)
+                      .add("metadata", GSON.toJson(auditMessage.getPayload())));
     } else {
       throw new IOException("Entity does not have a namespace and was not written to the auditLog: " + entityId);
     }
   }
+
 
   /**
    * This method generates a unique key to use for the data table.
@@ -184,15 +131,15 @@ public final class AuditLogTable extends AbstractDataset {
                         long timestamp) {
     String uuid = UUID.randomUUID().toString();
     int byteBufferSize = namespace.length() +
-                         entityType.length() +
-                         entityName.length() +
-                         Bytes.SIZEOF_LONG +
-                         uuid.length() +
-                         (4 * KEY_DELIMITER.length);
+            entityType.length() +
+            entityName.length() +
+            Bytes.SIZEOF_LONG +
+            uuid.length() +
+            (4 * KEY_DELIMITER.length);
     ByteBuffer bb = createEntityKeyPart(byteBufferSize, namespace, entityType, entityName);
     bb.putLong(getInvertedTsKeyPart(timestamp))
-      .put(KEY_DELIMITER)
-      .put(Bytes.toBytes(uuid));
+            .put(KEY_DELIMITER)
+            .put(Bytes.toBytes(uuid));
     return bb.array();
   }
 
@@ -209,10 +156,10 @@ public final class AuditLogTable extends AbstractDataset {
                             String entityName,
                             long timestamp) {
     int byteBufferSize = namespace.length() +
-                         entityType.length() +
-                         entityName.length() +
-                         Bytes.SIZEOF_LONG +
-                         (3 * KEY_DELIMITER.length);
+            entityType.length() +
+            entityName.length() +
+            Bytes.SIZEOF_LONG +
+            (3 * KEY_DELIMITER.length);
     ByteBuffer bb = createEntityKeyPart(byteBufferSize, namespace, entityType, entityName);
     bb.putLong(getInvertedTsScanKeyPart(timestamp));
     return bb.array();
@@ -229,11 +176,11 @@ public final class AuditLogTable extends AbstractDataset {
   private ByteBuffer createEntityKeyPart(int byteBufferSize, String namespace, String entityType, String entityName) {
     ByteBuffer bb = ByteBuffer.allocate(byteBufferSize);
     bb.put(Bytes.toBytes(namespace))
-      .put(KEY_DELIMITER)
-      .put(Bytes.toBytes(entityType))
-      .put(KEY_DELIMITER)
-      .put(Bytes.toBytes(entityName))
-      .put(KEY_DELIMITER);
+            .put(KEY_DELIMITER)
+            .put(Bytes.toBytes(entityType))
+            .put(KEY_DELIMITER)
+            .put(Bytes.toBytes(entityName))
+            .put(KEY_DELIMITER);
     return bb;
   }
 
@@ -271,10 +218,10 @@ public final class AuditLogTable extends AbstractDataset {
         payload = AuditPayload.EMPTY_PAYLOAD;
     }
     return new AuditMessage(row.getLong("timestamp"),
-                            entityId,
-                            row.getString("user"),
-                            messageType,
-                            payload);
+            entityId,
+            row.getString("user"),
+            messageType,
+            payload);
   }
 
   /**
