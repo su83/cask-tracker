@@ -21,6 +21,7 @@ import co.cask.cdap.api.dataset.DatasetProperties;
 import co.cask.tracker.config.TrackerAppConfig;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
+import co.cask.tracker.entity.EntityLatestTimestampTable;
 
 import java.util.concurrent.TimeUnit;
 
@@ -31,8 +32,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public static final String APP_NAME = "Tracker";
-  public static final String AUDIT_LOG_DATASET_NAME = "AuditLog";
-  public static final String AUDIT_METRICS_DATASET_NAME = "AuditMetrics";
+  public static final String AUDIT_LOG_DATASET_NAME = "_auditLog";
+  public static final String AUDIT_METRICS_DATASET_NAME = "_auditMetrics";
+  public static final String ENTITY_LATEST_TIMESTAMP_DATASET_NAME = "_timeSinceTable";
 
   @Override
   public void configure() {
@@ -49,10 +51,10 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
             .add("dataset.cube.aggregation.agg1.dimensions",
                     "namespace,entity_type,entity_name,audit_type")
             .add("dataset.cube.aggregation.agg2.dimensions",
-                    "namespace,entity_type,entity_name,audit_type,program_name,app_name")
+                    "namespace,entity_type,entity_name,audit_type,program_name,app_name,program_type")
             .build();
     createDataset(AUDIT_METRICS_DATASET_NAME, AuditMetricsCube.class, prop);
-
+    createDataset(ENTITY_LATEST_TIMESTAMP_DATASET_NAME, EntityLatestTimestampTable.class);
     addFlow(new AuditLogFlow(getConfig()));
     addService(new AuditLogService());
     addService(new AuditMetricsService());

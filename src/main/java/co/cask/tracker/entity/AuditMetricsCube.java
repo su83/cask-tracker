@@ -24,6 +24,7 @@ import co.cask.cdap.api.dataset.lib.cube.CubeFact;
 import co.cask.cdap.api.dataset.lib.cube.CubeQuery;
 import co.cask.cdap.api.dataset.lib.cube.MeasureType;
 import co.cask.cdap.api.dataset.lib.cube.TimeSeries;
+import co.cask.cdap.api.dataset.lib.cube.TimeValue;
 import co.cask.cdap.api.dataset.module.EmbeddedDataset;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.audit.AuditType;
@@ -52,6 +53,21 @@ import java.util.concurrent.TimeUnit;
  */
 public class AuditMetricsCube extends AbstractDataset {
   private final Cube auditMetrics;
+
+  private enum Bucket {
+    DAY(TimeUnit.DAYS),
+    HOUR(TimeUnit.HOURS);
+
+    private final TimeUnit timeUnit;
+
+    Bucket(TimeUnit timeUnit) {
+      this.timeUnit = timeUnit;
+    }
+
+    public long getResolutionsSeconds() {
+      return timeUnit.toSeconds(1L);
+    }
+  }
 
   public AuditMetricsCube(DatasetSpecification spec,
                           @EmbeddedDataset("auditMetrics") Cube auditMetrics) {
@@ -83,10 +99,12 @@ public class AuditMetricsCube extends AbstractDataset {
         AccessPayload accessPayload = ((AccessPayload) auditMessage.getPayload());
         String programName = EntityIdHelper.getEntityName(accessPayload.getAccessor());
         String appName = EntityIdHelper.getApplicationName(accessPayload.getAccessor());
+        String programType = accessPayload.getAccessor().getEntity().name().toLowerCase();
         if (appName.length() != 0) {
           fact.addDimensionValue("app_name", appName);
         }
         fact.addDimensionValue("program_name", programName);
+        fact.addDimensionValue("program_type", programType);
 
         fact.addMeasurement(accessPayload.getAccessType().name().toLowerCase(), MeasureType.COUNTER, 1L);
       }
@@ -101,7 +119,7 @@ public class AuditMetricsCube extends AbstractDataset {
    *
    * @return A list of entities and their stats sorted in DESC order by count
    */
-  public List<TopEntitiesResult> getTopNDatasets(int topN, long startTime, long endTime) {
+  public List<TopDatasetsResult> getTopNDatasets(int topN, long startTime, long endTime, String namespace) {
     CubeQuery datasetQuery = CubeQuery.builder()
             .select()
             .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
@@ -109,6 +127,7 @@ public class AuditMetricsCube extends AbstractDataset {
             .from()
             .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
             .where()
+            .dimension("namespace", namespace)
             .dimension("entity_type", EntityType.DATASET.name().toLowerCase())
             .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
             .timeRange(startTime, endTime)
@@ -124,6 +143,7 @@ public class AuditMetricsCube extends AbstractDataset {
             .from()
             .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
             .where()
+            .dimension("namespace", namespace)
             .dimension("entity_type", EntityType.STREAM.name().toLowerCase())
             .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
             .timeRange(startTime, endTime)
@@ -131,28 +151,47 @@ public class AuditMetricsCube extends AbstractDataset {
             .dimension("entity_name")
             .limit(1000)
             .build();
-      Map<String, TopEntitiesResult> auditStats = transformTopNDatasetResult(auditMetrics.query(datasetQuery),
-                                                                             new HashMap<String, TopEntitiesResult>());
-      auditStats = transformTopNDatasetResult(auditMetrics.query(streamQuery), auditStats);
-      List<TopEntitiesResult> resultList = new ArrayList<>(auditStats.values());
+      Map<String, TopDatasetsResult> auditStats = transformTopNDatasetResult(auditMetrics.query(datasetQuery),
+                                                                             auditMetrics.query(streamQuery));
+      List<TopDatasetsResult> resultList = new ArrayList<>(auditStats.values());
       Collections.sort(resultList);
       return (topN >= resultList.size()) ? resultList : resultList.subList(0, topN);
   }
 
-  private Map<String, TopEntitiesResult> transformTopNDatasetResult(Collection<TimeSeries> results,
-                                                                    Map<String, TopEntitiesResult> resultsMap) {
-    for (TimeSeries t : results) {
+  private Map<String, TopDatasetsResult> transformTopNDatasetResult(Collection<TimeSeries> datasetResult,
+                                                                    Collection<TimeSeries> streamResults) {
+    HashMap<String, TopDatasetsResult> resultsMap = new HashMap<>();
+    for (TimeSeries t : datasetResult) {
       String entityName = t.getDimensionValues().get("entity_name");
-      if (!resultsMap.containsKey(entityName)) {
-        resultsMap.put(entityName, new TopEntitiesResult(entityName));
+      String key = getKey(entityName, "dataset");
+      if (!resultsMap.containsKey(key)) {
+        resultsMap.put(key, new TopDatasetsResult(entityName, "dataset"));
       }
-      resultsMap.get(entityName).addAccessType(t.getMeasureName(),
-              String.valueOf(t.getTimeValues().get(0).getValue()));
+      TopDatasetsResult result = resultsMap.get(key);
+      if (t.getMeasureName().equals("read")) {
+        result.setRead(t.getTimeValues().get(0).getValue());
+      } else if (t.getMeasureName().equals("write")) {
+        result.setWrite(t.getTimeValues().get(0).getValue());
+      }
+    }
+
+    for (TimeSeries t : streamResults) {
+      String entityName = t.getDimensionValues().get("entity_name");
+      String key = getKey(entityName, "stream");
+      if (!resultsMap.containsKey(key)) {
+        resultsMap.put(key, new TopDatasetsResult(entityName, "stream"));
+      }
+      TopDatasetsResult result = resultsMap.get(key);
+      if (t.getMeasureName().equals("read")) {
+        result.setRead(t.getTimeValues().get(0).getValue());
+      } else if (t.getMeasureName().equals("write")) {
+        result.setWrite(t.getTimeValues().get(0).getValue());
+      }
     }
     return resultsMap;
   }
 
-  public List<TopEntitiesResult> getTopNPrograms(int topN, long startTime, long endTime) {
+  public List<TopProgramsResult> getTopNPrograms(int topN, long startTime, long endTime, String namespace) {
     CubeQuery programQuery = CubeQuery.builder()
             .select()
             .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
@@ -160,19 +199,22 @@ public class AuditMetricsCube extends AbstractDataset {
             .from()
             .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
             .where()
+            .dimension("namespace", namespace)
             .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
             .timeRange(startTime, endTime)
             .groupBy()
             .dimension("program_name")
+            .dimension("app_name")
+            .dimension("program_type")
             .limit(1000)
             .build();
-      Map<String, TopEntitiesResult> auditStats = transformTopNProgramResult(auditMetrics.query(programQuery));
-      List<TopEntitiesResult> resultList = new ArrayList<>(auditStats.values());
+      Map<String, TopProgramsResult> auditStats = transformTopNProgramResult(auditMetrics.query(programQuery));
+      List<TopProgramsResult> resultList = new ArrayList<>(auditStats.values());
       Collections.sort(resultList);
       return (topN >= resultList.size()) ? resultList : resultList.subList(0, topN);
   }
 
-  public List<TopEntitiesResult> getTopNPrograms(int topN, long startTime, long endTime,
+  public List<TopProgramsResult> getTopNPrograms(int topN, long startTime, long endTime,
                                                  String namespace, String entityType, String entityName) {
     CubeQuery programQuery = CubeQuery.builder()
             .select()
@@ -188,31 +230,39 @@ public class AuditMetricsCube extends AbstractDataset {
             .timeRange(startTime, endTime)
             .groupBy()
             .dimension("program_name")
+            .dimension("app_name")
+            .dimension("program_type")
             .limit(1000)
             .build();
-      Map<String, TopEntitiesResult> auditStats = transformTopNProgramResult(auditMetrics.query(programQuery));
-      List<TopEntitiesResult> resultList = new ArrayList<>(auditStats.values());
+      Map<String, TopProgramsResult> auditStats = transformTopNProgramResult(auditMetrics.query(programQuery));
+      List<TopProgramsResult> resultList = new ArrayList<>(auditStats.values());
       Collections.sort(resultList);
       return (topN >= resultList.size()) ? resultList : resultList.subList(0, topN);
   }
 
-  private Map<String, TopEntitiesResult> transformTopNProgramResult(Collection<TimeSeries> results) {
-    HashMap<String, TopEntitiesResult> resultsMap = new HashMap<>();
+  private Map<String, TopProgramsResult> transformTopNProgramResult(Collection<TimeSeries> results) {
+    HashMap<String, TopProgramsResult> resultsMap = new HashMap<>();
     for (TimeSeries t : results) {
       String programName = t.getDimensionValues().get("program_name");
       if (Strings.isNullOrEmpty(programName)) {
         continue;
       }
-      if (!resultsMap.containsKey(programName)) {
-        resultsMap.put(programName, new TopEntitiesResult(programName));
+      String appName = t.getDimensionValues().get("app_name");
+      String programType = t.getDimensionValues().get("program_type");
+      String key = getKey(appName, programName, programType);
+
+      long value = t.getTimeValues().get(0).getValue();
+      TopProgramsResult result = resultsMap.get(key);
+      if (result == null) {
+        resultsMap.put(key, new TopProgramsResult(programName, appName, programType, value));
+      } else {
+        result.increment(value);
       }
-      resultsMap.get(programName).addAccessType(t.getMeasureName(),
-              String.valueOf(t.getTimeValues().get(0).getValue()));
     }
     return resultsMap;
   }
 
-  public List<TopEntitiesResult> getTopNApplications(int topN, long startTime, long endTime,
+  public List<TopApplicationsResult> getTopNApplications(int topN, long startTime, long endTime,
                                                      String namespace, String entityType, String entityName) {
     CubeQuery applicationQuery = CubeQuery.builder()
             .select()
@@ -230,14 +280,14 @@ public class AuditMetricsCube extends AbstractDataset {
             .dimension("app_name")
             .limit(1000)
             .build();
-      Map<String, TopEntitiesResult> auditStats
+      Map<String, TopApplicationsResult> auditStats
               = transformTopNApplicationResult(auditMetrics.query(applicationQuery));
-      List<TopEntitiesResult> resultList = new ArrayList<>(auditStats.values());
+      List<TopApplicationsResult> resultList = new ArrayList<>(auditStats.values());
       Collections.sort(resultList);
       return (topN >= resultList.size()) ? resultList : resultList.subList(0, topN);
   }
 
-  public List<TopEntitiesResult> getTopNApplications(int topN, long startTime, long endTime) {
+  public List<TopApplicationsResult> getTopNApplications(int topN, long startTime, long endTime, String namespace) {
     CubeQuery applicationQuery = CubeQuery.builder()
             .select()
             .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
@@ -246,33 +296,74 @@ public class AuditMetricsCube extends AbstractDataset {
             .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
             .where()
             .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
+            .dimension("namespace", namespace)
             .timeRange(startTime, endTime)
             .groupBy()
             .dimension("app_name")
             .limit(1000)
             .build();
-      Map<String, TopEntitiesResult> auditStats
+      Map<String, TopApplicationsResult> auditStats
               = transformTopNApplicationResult(auditMetrics.query(applicationQuery));
-      List<TopEntitiesResult> resultList = new ArrayList<>(auditStats.values());
+      List<TopApplicationsResult> resultList = new ArrayList<>(auditStats.values());
       Collections.sort(resultList);
       return (topN >= resultList.size()) ? resultList : resultList.subList(0, topN);
 
   }
 
 
-  private Map<String, TopEntitiesResult> transformTopNApplicationResult(Collection<TimeSeries> results) {
-    HashMap<String, TopEntitiesResult> resultsMap = new HashMap<>();
+  private Map<String, TopApplicationsResult> transformTopNApplicationResult(Collection<TimeSeries> results) {
+    HashMap<String, TopApplicationsResult> resultsMap = new HashMap<>();
     for (TimeSeries t : results) {
       String appName = t.getDimensionValues().get("app_name");
       if (Strings.isNullOrEmpty(appName)) {
         continue;
       }
-      if (!resultsMap.containsKey(appName)) {
-        resultsMap.put(appName, new TopEntitiesResult(appName));
+      long value = t.getTimeValues().get(0).getValue();
+      TopApplicationsResult result = resultsMap.get(appName);
+      if (result == null) {
+        resultsMap.put(appName, new TopApplicationsResult(appName, value));
+      } else {
+        result.increment(value);
       }
-      resultsMap.get(appName).addAccessType(t.getMeasureName(),
-              String.valueOf(t.getTimeValues().get(0).getValue()));
     }
     return resultsMap;
   }
+
+  public AuditHistogramResult getAuditHistogram(long startTime, long endTime, String namespace) {
+    Bucket resolution = getResolutionBucket(startTime, endTime);
+    CubeQuery histogramQuery = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(resolution.getResolutionsSeconds(), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .timeRange(startTime, endTime)
+      .limit(1000)
+      .build();
+
+      Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
+      TimeSeries t = results.iterator().next();
+      List<TimeValue> timeValueList = t.getTimeValues();
+
+      return new AuditHistogramResult(resolution.name(), timeValueList);
+  }
+
+  // This will be updated if we change how we select resolution.
+  private Bucket getResolutionBucket(long startTime, long endTime) {
+    if ((endTime - startTime) > TimeUnit.DAYS.toSeconds(7L)) {
+      return Bucket.DAY;
+    }
+    return Bucket.HOUR;
+  }
+
+  private static String getKey(String s1, String s2, String s3) {
+    return String.format("%s%s%s%s%s%s", Integer.toString(s1.length()), s1, Integer.toString(s2.length()), s2,
+                         Integer.toString(s3.length()), s3);
+  }
+
+  private static String getKey(String s1, String s2) {
+    return String.format("%s%s%s%s", Integer.toString(s1.length()), s1, Integer.toString(s2.length()), s2);
+  }
+
 }

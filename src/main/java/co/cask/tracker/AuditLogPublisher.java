@@ -26,6 +26,7 @@ import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.id.EntityId;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
+import co.cask.tracker.entity.EntityLatestTimestampTable;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
@@ -49,6 +50,8 @@ public final class AuditLogPublisher extends AbstractFlowlet {
   @UseDataSet(TrackerApp.AUDIT_METRICS_DATASET_NAME)
   private AuditMetricsCube auditMetrics;
 
+  @UseDataSet(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME)
+  private EntityLatestTimestampTable entityLatestTimestampTable;
 
   @ProcessInput
   public void process(StreamEvent event) {
@@ -69,6 +72,12 @@ public final class AuditLogPublisher extends AbstractFlowlet {
         auditMetrics.write(message);
       } catch (IOException e) {
         LOG.warn("Writing audit event to audit metrics {} failed due to exception", event, e);
+      }
+
+      try {
+        entityLatestTimestampTable.write(message);
+      } catch (IOException e) {
+        LOG.warn("Writing audit event to the TimeSince table {} failed due to exception", event, e);
       }
     }
   }

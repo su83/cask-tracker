@@ -15,19 +15,26 @@
  */
 package co.cask.tracker;
 
-import co.cask.cdap.api.annotation.UseDataSet;
 import co.cask.cdap.api.service.http.AbstractHttpServiceHandler;
 import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
+import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.AuditMetricsCube;
-import co.cask.tracker.entity.TopEntitiesResultWrapper;
+import co.cask.tracker.entity.EntityLatestTimestampTable;
+import co.cask.tracker.entity.TimeSinceResult;
+import co.cask.tracker.entity.TopApplicationsResult;
+import co.cask.tracker.entity.TopProgramsResult;
 import com.google.common.base.Strings;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
 
@@ -36,94 +43,103 @@ import javax.ws.rs.QueryParam;
  */
 public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   private AuditMetricsCube auditMetricsCube;
+  private EntityLatestTimestampTable entityLatestTimestampTable;
   private String namespace;
-  private static final String LIMIT_INVALID_MESSAGE = "limit cannot be negative or zero.";
-  private static final String STARTTIME_GREATER_THAN_ENDTIME = "Start time cannot be greater than end time";
+
+  // Error messages
+  private static final String LIMIT_INVALID_MESSAGE = "Limit cannot be negative or zero.";
+  private static final String STARTTIME_GREATER_THAN_ENDTIME = "Start time cannot be greater than end time.";
+  private static final String SPECIFY_ENTITY_NAME_AND_TYPE = "Entity Name and Entity Type must be specified.";
+  private static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized";
 
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
     super.initialize(context);
     namespace = context.getNamespace();
     auditMetricsCube = context.getDataset(TrackerApp.AUDIT_METRICS_DATASET_NAME);
+    entityLatestTimestampTable = context.getDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME);
+
   }
 
-  @Path("v1/auditmetrics/topEntities/datasets")
+  @Path("v1/auditmetrics/top-entities/{entity-name}")
   @GET
-  public void topNDatasets(HttpServiceRequest request, HttpServiceResponder responder,
-                           @QueryParam("limit") @DefaultValue("5") int limit,
-                           @QueryParam("startTime") @DefaultValue("0") long startTime,
-                           @QueryParam("endTime") @DefaultValue("0") long endTime) {
-    if (!isLimitValid(limit)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID_MESSAGE);
-      return;
-    }
-    endTime = setEndTime(endTime);
-    if (!isTimeFrameValid(startTime, endTime)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME);
-      return;
-    }
-    responder.sendJson(HttpResponseStatus.OK.getCode(),
-            new TopEntitiesResultWrapper(auditMetricsCube.getTopNDatasets(limit, startTime, endTime)));
-  }
-
-  @Path("v1/auditmetrics/topEntities/programs")
-  @GET
-  public void topNPrograms(HttpServiceRequest request, HttpServiceResponder responder,
-                           @QueryParam("limit") @DefaultValue("5") int limit,
-                           @QueryParam("startTime") @DefaultValue("0") long startTime,
-                           @QueryParam("endTime") @DefaultValue("0") long endTime,
-                           @QueryParam("entityType") @DefaultValue("") String entityType,
-                           @QueryParam("entityName") @DefaultValue("") String entityName) {
-    if (!isLimitValid(limit)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID_MESSAGE);
-      return;
-    }
-    endTime = setEndTime(endTime);
-
-    if (!isTimeFrameValid(startTime, endTime)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME);
-      return;
-    }
-    TopEntitiesResultWrapper result;
-    if (!isDatasetSpecified(entityType, entityName)) {
-      result = new TopEntitiesResultWrapper(auditMetricsCube.getTopNPrograms(limit, startTime, endTime));
-    } else {
-      result = new TopEntitiesResultWrapper(auditMetricsCube.getTopNPrograms(limit, startTime, endTime,
-                                            namespace, entityType, entityName));
-    }
-    result.formatDataByTotal();
-    responder.sendJson(HttpResponseStatus.OK.getCode(), result);
-  }
-
-
-  @Path("v1/auditmetrics/topEntities/applications")
-  @GET
-  public void topNApplications(HttpServiceRequest request, HttpServiceResponder responder,
+  public void topNEntity(HttpServiceRequest request, HttpServiceResponder responder,
+                               @PathParam("entity-name") String topEntity,
                                @QueryParam("limit") @DefaultValue("5") int limit,
                                @QueryParam("startTime") @DefaultValue("0") long startTime,
                                @QueryParam("endTime") @DefaultValue("0") long endTime,
                                @QueryParam("entityType") @DefaultValue("") String entityType,
                                @QueryParam("entityName") @DefaultValue("") String entityName) {
     if (!isLimitValid(limit)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID_MESSAGE);
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID_MESSAGE, StandardCharsets.UTF_8);
       return;
     }
     endTime = setEndTime(endTime);
 
     if (!isTimeFrameValid(startTime, endTime)) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME);
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME,
+                           StandardCharsets.UTF_8);
       return;
     }
-    TopEntitiesResultWrapper result;
-    if (!isDatasetSpecified(entityType, entityName)) {
-      result = new TopEntitiesResultWrapper(auditMetricsCube.getTopNApplications(limit, startTime, endTime));
-    } else {
-      result = new TopEntitiesResultWrapper(auditMetricsCube.getTopNApplications(limit, startTime, endTime,
-                                            namespace, entityType, entityName));
+
+    switch (topEntity) {
+      case "applications":
+        List<TopApplicationsResult> appResult;
+        if (isDatasetSpecified(entityType, entityName)) {
+          appResult = auditMetricsCube.getTopNApplications(limit, startTime, endTime,
+                                                           namespace, entityType, entityName);
+        } else {
+          appResult = auditMetricsCube.getTopNApplications(limit, startTime, endTime, namespace);
+        }
+        responder.sendJson(appResult);
+        break;
+      case "programs":
+        List<TopProgramsResult> progResult;
+        if (isDatasetSpecified(entityType, entityName)) {
+          progResult = auditMetricsCube.getTopNPrograms(limit, startTime, endTime, namespace, entityType, entityName);
+        } else {
+          progResult = auditMetricsCube.getTopNPrograms(limit, startTime, endTime, namespace);
+        }
+        responder.sendJson(progResult);
+        break;
+      case "datasets":
+        responder.sendJson(auditMetricsCube.getTopNDatasets(limit, startTime, endTime, namespace));
+        break;
+      default:
+        responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(),
+                             INVALID_TOP_ENTITY_REQUEST, StandardCharsets.UTF_8);
     }
-    result.formatDataByTotal();
-    responder.sendJson(HttpResponseStatus.OK.getCode(), result);
   }
+
+  @Path("v1/auditmetrics/time-since")
+  @GET
+  public void timeSince(HttpServiceRequest request, HttpServiceResponder responder,
+                        @QueryParam("entityType") String entityType, @QueryParam("entityName") String entityName) {
+    if (Strings.isNullOrEmpty(entityType) || Strings.isNullOrEmpty(entityName)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(),
+                           SPECIFY_ENTITY_NAME_AND_TYPE, StandardCharsets.UTF_8);
+      return;
+    }
+    TimeSinceResult result = entityLatestTimestampTable.read(namespace, entityType, entityName);
+    responder.sendJson(result.getTimeSinceEvents());
+  }
+
+  @Path("v1/auditmetrics/audit-histogram")
+  @GET
+  public void auditLogHistogram(HttpServiceRequest request, HttpServiceResponder responder,
+                                @QueryParam("startTime") @DefaultValue("0") long startTime,
+                                @QueryParam("endTime") @DefaultValue("0") long endTime) {
+    endTime = setEndTime(endTime);
+
+    if (!isTimeFrameValid(startTime, endTime)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME,
+                           StandardCharsets.UTF_8);
+      return;
+    }
+    AuditHistogramResult result = auditMetricsCube.getAuditHistogram(startTime, endTime, namespace);
+    responder.sendJson(result);
+  }
+
 
   private boolean isLimitValid (int limit) {
     return (limit > 0);
@@ -137,6 +153,7 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
     return (!Strings.isNullOrEmpty(entityType) && !Strings.isNullOrEmpty(entityName));
   }
 
+  // If endTime received "0" by default, change it to the current time
   private long setEndTime(long endTime) {
     if (endTime == 0) {
       return (System.currentTimeMillis() / 1000);
