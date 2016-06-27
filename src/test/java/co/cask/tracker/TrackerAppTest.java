@@ -86,7 +86,7 @@ public class TrackerAppTest extends TestBase {
 
   @Before
   public void configureStream() throws Exception {
-    testAppManager = deployApplicationWithScalaJar(TestAuditLogPublisherApp.class, null);
+    testAppManager = deployApplication(TestAuditLogPublisherApp.class);
     FlowManager testFlowManager = testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).start();
     testFlowManager.waitForStatus(true);
 
@@ -187,17 +187,6 @@ public class TrackerAppTest extends TestBase {
     // Total count should be equal to the number of events fed to the cube.
     Assert.assertEquals(14, total);
   }
-
-  private static ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
-    URL classUrl = Product.class.getClassLoader().getResource("scala/Product.class");
-    String path = classUrl.getFile();
-    if (config != null) {
-      return deployApplication(appClass, config, new File(URI.create(path.substring(0, path.indexOf("!/")))));
-    } else {
-      return deployApplication(appClass, new File(URI.create(path.substring(0, path.indexOf("!/")))));
-    }
-  }
-
 
   private String getServiceResponse(ServiceManager serviceManager,
                                     String request,
