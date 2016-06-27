@@ -17,7 +17,9 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.Config;
+import co.cask.cdap.api.dataset.lib.cube.TimeValue;
 import co.cask.cdap.api.metrics.RuntimeMetrics;
+import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.audit.AuditPayload;
 import co.cask.cdap.proto.audit.AuditType;
@@ -34,7 +36,10 @@ import co.cask.cdap.test.ServiceManager;
 import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
-import co.cask.tracker.entity.TopEntitiesResultWrapper;
+import co.cask.tracker.entity.AuditHistogramResult;
+import co.cask.tracker.entity.TopApplicationsResult;
+import co.cask.tracker.entity.TopDatasetsResult;
+import co.cask.tracker.entity.TopProgramsResult;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
@@ -48,11 +53,14 @@ import org.junit.Test;
 import scala.Product;
 
 import java.io.File;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -66,6 +74,12 @@ public class TrackerAppTest extends TestBase {
   private static ApplicationManager testAppManager;
   private static ServiceManager auditLogServiceManager;
   private static ServiceManager auditMetricsServiceManager;
+
+  private static final Type DATASET_LIST = new TypeToken<List<TopDatasetsResult>>() { }.getType();
+  private static final Type PROGRAM_LIST = new TypeToken<List<TopProgramsResult>>() { }.getType();
+  private static final Type APPLICATION_LIST = new TypeToken<List<TopApplicationsResult>>() { }.getType();
+  private static final Type TIMESINCE_MAP = new TypeToken<Map<String, Long>>() { }.getRawType();
+
 
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
@@ -109,7 +123,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testInvalidOffset() throws Exception {
     String response = getServiceResponse(auditLogServiceManager,
-            "auditlog/stream/stream1?offset=-1",
+                                         "auditlog/stream/stream1?offset=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals("\"offset cannot be negative.\"", response);
   }
@@ -117,7 +131,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testInvalidLimit() throws Exception {
     String response = getServiceResponse(auditLogServiceManager,
-            "auditlog/stream/stream1?limit=-1",
+                                         "auditlog/stream/stream1?limit=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals("\"limit cannot be negative.\"", response);
   }
@@ -125,32 +139,54 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testTopNDatasets() throws Exception {
     String response = getServiceResponse(auditMetricsServiceManager,
-            "v1/auditmetrics/topEntities/datasets?limit=20",
+                                         "v1/auditmetrics/top-entities/datasets?limit=20",
             HttpResponseStatus.OK.getCode());
-    TopEntitiesResultWrapper result = GSON.fromJson(response, TopEntitiesResultWrapper.class);
-    Assert.assertEquals(4, result.getTotal());
+    List<TopDatasetsResult> result = GSON.fromJson(response, DATASET_LIST);
+    Assert.assertEquals(4, result.size());
   }
 
 
   @Test
   public void testTopNPrograms() throws Exception {
     String response = getServiceResponse(auditMetricsServiceManager,
-            "v1/auditmetrics/topEntities/programs?limit=20",
+                                         "v1/auditmetrics/top-entities/programs?limit=20",
             HttpResponseStatus.OK.getCode());
-    TopEntitiesResultWrapper result = GSON.fromJson(response, TopEntitiesResultWrapper.class);
-    Assert.assertEquals(4, result.getTotal());
+    List<TopProgramsResult> result = GSON.fromJson(response, PROGRAM_LIST);
+    Assert.assertEquals(5, result.size());
   }
 
   @Test
   public void testTopNApplications() throws Exception {
     String response = getServiceResponse(auditMetricsServiceManager,
-            "v1/auditmetrics/topEntities/applications?limit=20",
+                                         "v1/auditmetrics/top-entities/applications?limit=20",
             HttpResponseStatus.OK.getCode());
-    TopEntitiesResultWrapper result = GSON.fromJson(response, TopEntitiesResultWrapper.class);
-    Assert.assertEquals(4, result.getTotal());
+    List<TopApplicationsResult> result = GSON.fromJson(response, APPLICATION_LIST);
+    Assert.assertEquals(4, result.size());
 
   }
 
+  @Test
+  public void testTimeSince() throws  Exception {
+    String response = getServiceResponse(auditMetricsServiceManager,
+                                         "v1/auditmetrics/time-since?entityType=dataset&entityName=ds1",
+                                         HttpResponseStatus.OK.getCode());
+    Map<String, Long> resultMap = GSON.fromJson(response, TIMESINCE_MAP);
+    Assert.assertEquals(2, resultMap.size());
+  }
+
+  @Test
+  public void testAuditLogHistogram() throws Exception {
+    String response = getServiceResponse(auditMetricsServiceManager, "v1/auditmetrics/audit-histogram",
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Collection<TimeValue> results = result.getResults();
+    int total = 0;
+    for (TimeValue t : results) {
+      total += t.getValue();
+    }
+    // Total count should be equal to the number of events fed to the cube.
+    Assert.assertEquals(14, total);
+  }
 
   private static ApplicationManager deployApplicationWithScalaJar(Class appClass, Config config) {
     URL classUrl = Product.class.getClassLoader().getResource("scala/Product.class");

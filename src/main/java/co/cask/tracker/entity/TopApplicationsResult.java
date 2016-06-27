@@ -16,32 +16,32 @@
 
 package co.cask.tracker.entity;
 
-import java.util.List;
-
 /**
- * A POJO to hold the results for the TopN query in format expected by the api
+ * A POJO to hold the results for the TopN query.
  */
-public class TopEntitiesResultWrapper {
-  private final List<TopEntitiesResult> results;
-  private final int total;
+public class TopApplicationsResult implements Comparable<TopApplicationsResult> {
+  private final String entityName;
+  private long value;
 
-  public TopEntitiesResultWrapper(List<TopEntitiesResult> resultList) {
-    this.results = resultList;
-    this.total = resultList.size();
+  public TopApplicationsResult(String entityName, long value) {
+    this.entityName = entityName;
+    this.value = value;
   }
 
-  public int getTotal() {
-    return total;
+  public long getValue() {
+    return value;
   }
 
-  public List<TopEntitiesResult> getResultList() {
-    return results;
+  public String getEntityName() {
+    return entityName;
   }
 
-  public void formatDataByTotal() {
-    for (TopEntitiesResult result: results) {
-      result.formatDataByTotal();
-    }
+  public void increment(long value) {
+    this.value += value;
   }
 
+  @Override
+  public int compareTo(TopApplicationsResult o) {
+    return Long.compare(o.getValue(), getValue());
+  }
 }

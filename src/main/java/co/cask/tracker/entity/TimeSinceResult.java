@@ -37,23 +37,12 @@ public class TimeSinceResult {
     this.columnValues = new HashMap<>();
   }
 
-  public String getNamespace() {
-    return namespace;
-  }
-
-  public String getEntityType() {
-    return entityType;
-  }
-
-  public String getEntityName() {
-    return entityName;
-  }
-
   public Map<String, Long> getTimeSinceEvents() {
     Map<String, Long> results = new HashMap<>();
-    long now = System.currentTimeMillis();
+    // convert to seconds
+    long now = System.currentTimeMillis() / 1000;
     for (Map.Entry<String, Long> entry : columnValues.entrySet()) {
-      results.put(entry.getKey(), (now - entry.getValue()) / 1000);
+      results.put(entry.getKey(), now - entry.getValue());
     }
     return results;
   }
