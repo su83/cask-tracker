@@ -25,11 +25,13 @@ import co.cask.tracker.entity.EntityLatestTimestampTable;
 import co.cask.tracker.entity.TimeSinceResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopProgramsResult;
+import co.cask.tracker.utils.TimeMathParser;
 import com.google.common.base.Strings;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -49,6 +51,8 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   // Error messages
   private static final String LIMIT_INVALID_MESSAGE = "Limit cannot be negative or zero.";
   private static final String STARTTIME_GREATER_THAN_ENDTIME = "Start time cannot be greater than end time.";
+  private static final String INVALID_TIME_FORMAT = "startTime or endTime was not in the correct format. " +
+                                                    "Use unix timestamps or date math such as now-1h.";
   private static final String SPECIFY_ENTITY_NAME_AND_TYPE = "Entity Name and Entity Type must be specified.";
   private static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized";
 
@@ -66,16 +70,20 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   public void topNEntity(HttpServiceRequest request, HttpServiceResponder responder,
                                @PathParam("entity-name") String topEntity,
                                @QueryParam("limit") @DefaultValue("5") int limit,
-                               @QueryParam("startTime") @DefaultValue("0") long startTime,
-                               @QueryParam("endTime") @DefaultValue("0") long endTime,
+                               @QueryParam("startTime") @DefaultValue("0") String startTimeString,
+                               @QueryParam("endTime") @DefaultValue("now") String endTimeString,
                                @QueryParam("entityType") @DefaultValue("") String entityType,
                                @QueryParam("entityName") @DefaultValue("") String entityName) {
     if (!isLimitValid(limit)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID_MESSAGE, StandardCharsets.UTF_8);
       return;
     }
-    endTime = setEndTime(endTime);
-
+    long endTime = parseTime(endTimeString);
+    long startTime = parseTime(startTimeString);
+    if (!isTimeFormatValid(startTime, endTime)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TIME_FORMAT, StandardCharsets.UTF_8);
+      return;
+    }
     if (!isTimeFrameValid(startTime, endTime)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME,
                            StandardCharsets.UTF_8);
@@ -127,10 +135,14 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   @Path("v1/auditmetrics/audit-histogram")
   @GET
   public void auditLogHistogram(HttpServiceRequest request, HttpServiceResponder responder,
-                                @QueryParam("startTime") @DefaultValue("0") long startTime,
-                                @QueryParam("endTime") @DefaultValue("0") long endTime) {
-    endTime = setEndTime(endTime);
-
+                                @QueryParam("startTime") @DefaultValue("0") String startTimeString,
+                                @QueryParam("endTime") @DefaultValue("now") String endTimeString) {
+    long endTime = parseTime(endTimeString);
+    long startTime = parseTime(startTimeString);
+    if (!isTimeFormatValid(startTime, endTime)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TIME_FORMAT, StandardCharsets.UTF_8);
+      return;
+    }
     if (!isTimeFrameValid(startTime, endTime)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), STARTTIME_GREATER_THAN_ENDTIME,
                            StandardCharsets.UTF_8);
@@ -149,16 +161,22 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
     return (startTime < endTime);
   }
 
+  private boolean isTimeFormatValid (long startTime, long endTime) {
+    return (startTime != -1 && endTime != -1);
+  }
+
   private boolean isDatasetSpecified (String entityType, String entityName) {
     return (!Strings.isNullOrEmpty(entityType) && !Strings.isNullOrEmpty(entityName));
   }
 
-  // If endTime received "0" by default, change it to the current time
-  private long setEndTime(long endTime) {
-    if (endTime == 0) {
-      return (System.currentTimeMillis() / 1000);
+  private long parseTime(String time) {
+    long timeStamp;
+    try {
+      timeStamp = TimeMathParser.parseTime(time, TimeUnit.SECONDS);
+    } catch (IllegalArgumentException e) {
+      timeStamp = -1;
     }
-    return endTime;
+    return timeStamp;
   }
 
 }

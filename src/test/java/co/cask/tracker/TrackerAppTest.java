@@ -16,7 +16,6 @@
 
 package co.cask.tracker;
 
-import co.cask.cdap.api.Config;
 import co.cask.cdap.api.dataset.lib.cube.TimeValue;
 import co.cask.cdap.api.metrics.RuntimeMetrics;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
@@ -50,12 +49,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
-import scala.Product;
 
-import java.io.File;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
