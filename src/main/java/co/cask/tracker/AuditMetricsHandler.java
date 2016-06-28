@@ -171,12 +171,15 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
 
   private long parseTime(String time) {
     long timeStamp;
-    try {
-      timeStamp = TimeMathParser.parseTime(time, TimeUnit.SECONDS);
-    } catch (IllegalArgumentException e) {
+    if (time != null) {
+      try {
+        timeStamp = TimeMathParser.parseTime(time, TimeUnit.SECONDS);
+      } catch (IllegalArgumentException e) {
+        timeStamp = -1;
+      }
+    } else {
       timeStamp = -1;
     }
     return timeStamp;
   }
-
 }

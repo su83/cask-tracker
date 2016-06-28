@@ -113,7 +113,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
             "auditlog/stream/stream1?startTime=1&endTime=0",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"startTime must be before endTime.\"", response);
+    Assert.assertEquals("Start time cannot be greater than end time.", response);
   }
 
   @Test
@@ -121,7 +121,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?offset=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"offset cannot be negative.\"", response);
+    Assert.assertEquals("Offset cannot be negative.", response);
   }
 
   @Test
@@ -129,7 +129,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?limit=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"limit cannot be negative.\"", response);
+    Assert.assertEquals("Limit cannot be negative or zero.", response);
   }
 
   @Test
