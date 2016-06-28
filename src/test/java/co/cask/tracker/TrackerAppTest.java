@@ -39,6 +39,7 @@ import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
 import co.cask.tracker.entity.TopProgramsResult;
+import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
@@ -113,7 +114,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
             "auditlog/stream/stream1?startTime=1&endTime=0",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("Start time cannot be greater than end time.", response);
+    Assert.assertEquals(ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, response);
   }
 
   @Test
@@ -121,7 +122,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?offset=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("Offset cannot be negative.", response);
+    Assert.assertEquals(ParameterCheck.OFFSET_INVALID, response);
   }
 
   @Test
@@ -129,7 +130,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?limit=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("Limit cannot be negative or zero.", response);
+    Assert.assertEquals(ParameterCheck.LIMIT_INVALID, response);
   }
 
   @Test
