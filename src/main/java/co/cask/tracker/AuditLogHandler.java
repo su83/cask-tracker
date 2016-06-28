@@ -23,14 +23,13 @@ import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.AuditLogTable;
-import co.cask.tracker.utils.TimeMathParser;
+import co.cask.tracker.utils.ParameterCheck;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -49,12 +48,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
   private AuditLogTable auditLogTable;
   private String namespace;
 
-  // Error messages
-  private static final String LIMIT_INVALID = "Limit cannot be negative or zero.";
-  private static final String OFFSET_INVALID = "Offset cannot be negative.";
-  private static final String STARTTIME_GREATER_THAN_ENDTIME = "Start time cannot be greater than end time.";
-  private static final String INVALID_TIME_FORMAT = "startTime or endTime was not in the correct format. " +
-                                                    "Use unix timestamps or date math such as now-1h.";
+
 
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
@@ -72,23 +66,23 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
                     @QueryParam("limit") @DefaultValue(DEFAULT_PAGE_SIZE) int limit,
                     @QueryParam("startTime") @DefaultValue("0") String startTime,
                     @QueryParam("endTime") @DefaultValue("now") String endTime) {
-    if (!isLimitValid(limit)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), LIMIT_INVALID, StandardCharsets.UTF_8);
+    if (!ParameterCheck.isLimitValid(limit)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.LIMIT_INVALID, StandardCharsets.UTF_8);
       return;
     }
-    if (!isOffsetValid(offset)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), OFFSET_INVALID, StandardCharsets.UTF_8);
+    if (!ParameterCheck.isOffsetValid(offset)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.OFFSET_INVALID, StandardCharsets.UTF_8);
       return;
     }
-    long startTimeLong = parseTime(startTime);
-    long endTimeLong = parseTime(endTime);
-    if (!isTimeFormatValid(startTimeLong, endTimeLong)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TIME_FORMAT, StandardCharsets.UTF_8);
+    long startTimeLong = ParameterCheck.parseTime(startTime);
+    long endTimeLong = ParameterCheck.parseTime(endTime);
+    if (!ParameterCheck.isTimeFormatValid(startTimeLong, endTimeLong)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.INVALID_TIME_FORMAT, StandardCharsets.UTF_8);
       return;
     }
-    if (!isTimeFrameValid(startTimeLong, endTimeLong)) {
+    if (!ParameterCheck.isTimeFrameValid(startTimeLong, endTimeLong)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(),
-                           STARTTIME_GREATER_THAN_ENDTIME, StandardCharsets.UTF_8);
+                           ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, StandardCharsets.UTF_8);
       return;
     }
     List<AuditMessage> logList = new ArrayList<>();
@@ -124,36 +118,6 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
 
     AuditLogResponse resp = new AuditLogResponse(totalResults, logList, offset);
     responder.sendJson(200, resp);
-  }
-
-  private boolean isLimitValid (int limit) {
-    return (limit > 0);
-  }
-
-  private boolean isOffsetValid(int offset) {
-    return (offset >= 0);
-  }
-
-  private boolean isTimeFrameValid (long startTime, long endTime) {
-    return (startTime < endTime);
-  }
-
-  private boolean isTimeFormatValid (long startTime, long endTime) {
-    return (startTime != -1 && endTime != -1);
-  }
-
-  private long parseTime(String time) {
-    long timeStamp;
-    if (time != null) {
-      try {
-        timeStamp = TimeMathParser.parseTime(time, TimeUnit.SECONDS);
-      } catch (IllegalArgumentException e) {
-        timeStamp = -1;
-      }
-    } else {
-      timeStamp = -1;
-    }
-    return timeStamp;
   }
 }
 
