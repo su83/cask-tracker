@@ -67,17 +67,20 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
                     @QueryParam("startTime") @DefaultValue("0") String startTime,
                     @QueryParam("endTime") @DefaultValue("now") String endTime) {
     if (!ParameterCheck.isLimitValid(limit)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.LIMIT_INVALID, StandardCharsets.UTF_8);
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.LIMIT_INVALID,
+                           StandardCharsets.UTF_8);
       return;
     }
     if (!ParameterCheck.isOffsetValid(offset)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.OFFSET_INVALID, StandardCharsets.UTF_8);
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.OFFSET_INVALID,
+                           StandardCharsets.UTF_8);
       return;
     }
     long startTimeLong = ParameterCheck.parseTime(startTime);
     long endTimeLong = ParameterCheck.parseTime(endTime);
     if (!ParameterCheck.isTimeFormatValid(startTimeLong, endTimeLong)) {
-      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.INVALID_TIME_FORMAT, StandardCharsets.UTF_8);
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.INVALID_TIME_FORMAT,
+                           StandardCharsets.UTF_8);
       return;
     }
     if (!ParameterCheck.isTimeFrameValid(startTimeLong, endTimeLong)) {
