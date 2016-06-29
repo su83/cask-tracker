@@ -21,9 +21,7 @@ import com.google.common.base.Strings;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A static class to make finding the name and parent app of an Entity easier.
- * Hack (Class should be removed after a getEntityName method is added to the EntityId class and implemented for
- * each Entities: CDAP-5578)
+ * A static class to hold static parameter error checking functions and corresponding error messages.
  */
 
 public class ParameterCheck {
