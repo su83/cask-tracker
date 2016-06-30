@@ -15,7 +15,6 @@
  */
 package co.cask.tracker;
 
-import co.cask.cdap.api.annotation.UseDataSet;
 import co.cask.cdap.api.dataset.lib.CloseableIterator;
 import co.cask.cdap.api.service.http.AbstractHttpServiceHandler;
 import co.cask.cdap.api.service.http.HttpServiceContext;
@@ -24,13 +23,13 @@ import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.AuditLogTable;
-import co.cask.tracker.utils.TimeMathParser;
+import co.cask.tracker.utils.ParameterCheck;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -43,18 +42,19 @@ import javax.ws.rs.QueryParam;
  */
 public final class AuditLogHandler extends AbstractHttpServiceHandler {
   private static final String DEFAULT_PAGE_SIZE = "10";
-  private static final long DEFAULT_START_TIME = 0L;
   // If we scan more than this + offset, we return early since the UI can't display that many anyway.
   private static final long MAX_RESULTS_TO_SCAN = 100;
 
-  @UseDataSet(TrackerApp.AUDIT_LOG_DATASET_NAME)
   private AuditLogTable auditLogTable;
   private String namespace;
+
+
 
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
     super.initialize(context);
     namespace = context.getNamespace();
+    auditLogTable = context.getDataset(TrackerApp.AUDIT_LOG_DATASET_NAME);
   }
 
   @Path("auditlog/{type}/{name}")
@@ -64,38 +64,28 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
                     @PathParam("name") String name,
                     @QueryParam("offset") int offset,
                     @QueryParam("limit") @DefaultValue(DEFAULT_PAGE_SIZE) int limit,
-                    @QueryParam("startTime") String startTime,
-                    @QueryParam("endTime") String endTime) {
-    if (limit < 0) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "limit cannot be negative.");
+                    @QueryParam("startTime") @DefaultValue("0") String startTime,
+                    @QueryParam("endTime") @DefaultValue("now") String endTime) {
+    if (!ParameterCheck.isLimitValid(limit)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.LIMIT_INVALID,
+                           StandardCharsets.UTF_8);
       return;
     }
-    if (offset < 0) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "offset cannot be negative.");
+    if (!ParameterCheck.isOffsetValid(offset)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.OFFSET_INVALID,
+                           StandardCharsets.UTF_8);
       return;
     }
-    long startTimeLong = DEFAULT_START_TIME;
-    if (startTime != null) {
-      try {
-        startTimeLong = TimeMathParser.parseTime(startTime, TimeUnit.MILLISECONDS);
-      } catch (IllegalArgumentException e) {
-        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
-                "startTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
-        return;
-      }
+    long startTimeLong = ParameterCheck.parseTime(startTime);
+    long endTimeLong = ParameterCheck.parseTime(endTime);
+    if (!ParameterCheck.isTimeFormatValid(startTimeLong, endTimeLong)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.INVALID_TIME_FORMAT,
+                           StandardCharsets.UTF_8);
+      return;
     }
-    long endTimeLong = System.currentTimeMillis();
-    if (endTime != null) {
-      try {
-        endTimeLong = TimeMathParser.parseTime(endTime, TimeUnit.MILLISECONDS);
-      } catch (IllegalArgumentException e) {
-        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(),
-                "endTime was not in the correct format. Use unix timestamps or date math such as now-1h.");
-        return;
-      }
-    }
-    if (startTimeLong > endTimeLong) {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), "startTime must be before endTime.");
+    if (!ParameterCheck.isTimeFrameValid(startTimeLong, endTimeLong)) {
+      responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(),
+                           ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, StandardCharsets.UTF_8);
       return;
     }
     List<AuditMessage> logList = new ArrayList<>();

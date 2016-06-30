@@ -16,7 +16,6 @@
 
 package co.cask.tracker;
 
-import co.cask.cdap.api.Config;
 import co.cask.cdap.api.dataset.lib.cube.TimeValue;
 import co.cask.cdap.api.metrics.RuntimeMetrics;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
@@ -40,6 +39,7 @@ import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
 import co.cask.tracker.entity.TopProgramsResult;
+import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
@@ -50,12 +50,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
-import scala.Product;
 
-import java.io.File;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -117,7 +114,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
             "auditlog/stream/stream1?startTime=1&endTime=0",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"startTime must be before endTime.\"", response);
+    Assert.assertEquals(ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, response);
   }
 
   @Test
@@ -125,7 +122,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?offset=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"offset cannot be negative.\"", response);
+    Assert.assertEquals(ParameterCheck.OFFSET_INVALID, response);
   }
 
   @Test
@@ -133,7 +130,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(auditLogServiceManager,
                                          "auditlog/stream/stream1?limit=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
-    Assert.assertEquals("\"limit cannot be negative.\"", response);
+    Assert.assertEquals(ParameterCheck.LIMIT_INVALID, response);
   }
 
   @Test
