@@ -27,13 +27,13 @@ import java.util.concurrent.TimeUnit;
 public class ParameterCheck {
 
   // Error messages
-  public static final String LIMIT_INVALID = "Limit cannot be negative or zero.";
-  public static final String OFFSET_INVALID = "Offset cannot be negative.";
-  public static final String STARTTIME_GREATER_THAN_ENDTIME = "Start time cannot be greater than end time.";
+  public static final String LIMIT_INVALID = "limit cannot be negative or zero.";
+  public static final String OFFSET_INVALID = "offset cannot be negative.";
+  public static final String STARTTIME_GREATER_THAN_ENDTIME = "startTime cannot be greater than endTime.";
   public static final String INVALID_TIME_FORMAT = "startTime or endTime was not in the correct format. " +
-                                                    "Use unix timestamps or date math such as now-1h.";
-  public static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized";
-  public static final String SPECIFY_ENTITY_NAME_AND_TYPE = "Entity Name and Entity Type must be specified.";
+                                                    "Use unix timestamps or date mathematics such as now-1h.";
+  public static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized.";
+  public static final String SPECIFY_ENTITY_NAME_AND_TYPE = "entityName and entityType must be specified.";
 
   public static boolean isLimitValid (int limit) {
     return (limit > 0);
