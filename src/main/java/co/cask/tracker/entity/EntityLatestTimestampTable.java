@@ -54,7 +54,10 @@ public final class EntityLatestTimestampTable extends AbstractDataset {
     }
     EntityId entityId = auditMessage.getEntityId();
     if (!(entityId instanceof NamespacedId)) {
-      throw new IOException("Entity does not have a namespace and was not written to the TimeSince table: " + entityId);
+      throw
+        new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
+                                                  "and was not written to EntityLatestTimestampTable",
+                                                entityId));
     }
     String namespace = ((NamespacedId) entityId).getNamespace();
     String entityName = EntityIdHelper.getEntityName(entityId);

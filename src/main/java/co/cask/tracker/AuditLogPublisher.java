@@ -24,6 +24,7 @@ import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.id.EntityId;
+import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
 import co.cask.tracker.entity.EntityLatestTimestampTable;
@@ -62,6 +63,16 @@ public final class AuditLogPublisher extends AbstractFlowlet {
   public void process(String event) {
     if (!event.isEmpty()) {
       AuditMessage message = GSON.fromJson(event, AuditMessage.class);
+      String currentNamespace = this.getContext().getNamespace();
+      EntityId entityId = message.getEntityId();
+      if (!(entityId instanceof NamespacedId)) {
+        throw new IllegalStateException(String.format("Entity '%s' in event '%s' does not have a namespace " +
+                                                        "and was not written to Tracker",
+                                                      entityId, event));
+      }
+      if (!((NamespacedId) (entityId)).getNamespace().equals(currentNamespace)) {
+        return;
+      }
       try {
         auditLog.write(message);
       } catch (IOException e) {
