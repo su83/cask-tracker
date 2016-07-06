@@ -17,7 +17,9 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.app.AbstractApplication;
+import co.cask.cdap.api.data.schema.Schema;
 import co.cask.cdap.api.dataset.DatasetProperties;
+import co.cask.cdap.api.dataset.table.Table;
 import co.cask.tracker.config.TrackerAppConfig;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
@@ -40,7 +42,16 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
   public void configure() {
     setName(APP_NAME);
     setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
-    createDataset(AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
+    Schema tableSchema = Schema.recordOf("table",
+                                         Schema.Field.of("timestamp", Schema.of(Schema.Type.LONG)),
+                                         Schema.Field.of("entityId", Schema.of(Schema.Type.STRING)),
+                                         Schema.Field.of("user", Schema.of(Schema.Type.STRING)),
+                                         Schema.Field.of("actionType", Schema.of(Schema.Type.STRING)),
+                                         Schema.Field.of("entityType", Schema.of(Schema.Type.STRING)),
+                                         Schema.Field.of("entityName", Schema.of(Schema.Type.STRING)),
+                                         Schema.Field.of("metadata", Schema.of(Schema.Type.STRING)));
+    createDataset(AUDIT_LOG_DATASET_NAME, AuditLogTable.class, DatasetProperties.builder()
+      .add(Table.PROPERTY_SCHEMA, tableSchema.toString()).build());
     String resolutions = String.format("%s,%s,%s,%s",
             TimeUnit.MINUTES.toSeconds(1L),
             TimeUnit.HOURS.toSeconds(1L),
