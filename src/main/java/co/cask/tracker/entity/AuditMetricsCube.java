@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -347,6 +348,138 @@ public class AuditMetricsCube extends AbstractDataset {
       List<TimeValue> timeValueList = t.getTimeValues();
 
       return new AuditHistogramResult(resolution.name(), timeValueList);
+  }
+
+  // Total number of unique programs
+  public long getTotalProgramsCount(String namespace) {
+    CubeQuery query = CubeQuery.builder()
+      .select()
+      .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .groupBy()
+      .dimension("program_name")
+      .dimension("program_type")
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> results = auditMetrics.query(query);
+    Map<String, Integer> uniquePrograms = new HashMap<>();
+    for (TimeSeries t : results) {
+      uniquePrograms.put(getKey(t.getDimensionValues().get("program_name"), t.getDimensionValues().get("program_type")),
+                         0);
+    }
+    return uniquePrograms.size();
+  }
+
+  // Total number of unique programs for a given entityName and entityType
+  public long getTotalProgramsCount(String namespace, String entityType, String entityName) {
+    CubeQuery query = CubeQuery.builder()
+      .select()
+      .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", entityType)
+      .dimension("entity_name", entityName)
+      .dimension("audit_type", AuditType.ACCESS.name().toLowerCase())
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .groupBy()
+      .dimension("program_name")
+      .dimension("program_type")
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> results = auditMetrics.query(query);
+    Map<String, Integer> uniquePrograms = new HashMap<>();
+    for (TimeSeries t : results) {
+      uniquePrograms.put(getKey(t.getDimensionValues().get("program_name"), t.getDimensionValues().get("program_type")),
+                         0);
+    }
+    return uniquePrograms.size();
+  }
+
+  // Total Audit log messages
+  public long getTotalActivity(String namespace) {
+    CubeQuery datasetQuery = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", EntityType.DATASET.name().toLowerCase())
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .limit(1000)
+      .build();
+
+    CubeQuery streamQuery = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", EntityType.STREAM.name().toLowerCase())
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> datasetResults = auditMetrics.query(datasetQuery);
+    Collection<TimeSeries> streamResults = auditMetrics.query(streamQuery);
+    // Single measurement queried; Aggregated for the 1st 365 days
+    return datasetResults.iterator().next().getTimeValues().get(0).getValue() +
+      streamResults.iterator().next().getTimeValues().get(0).getValue();
+  }
+
+  // Total Audit log messages for a given entityName and entityType
+  public long getTotalActivity(String namespace, String entityType, String entityName) {
+    CubeQuery query = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", entityType)
+      .dimension("entity_name", entityName)
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> results = auditMetrics.query(query);
+    // Single measurement queried; Aggregated for the 1st 365 days
+    return results.iterator().next().getTimeValues().get(0).getValue();
+  }
+
+  public List<String> getEntities(String namespace, String entityType) {
+    CubeQuery query = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", entityType)
+      .timeRange(0L, System.currentTimeMillis() / 1000)
+      .groupBy()
+      .dimension("entity_name")
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> result = auditMetrics.query(query);
+    List<String> entityList = new LinkedList<>();
+    for (TimeSeries t : result) {
+      entityList.add(t.getDimensionValues().get("entity_name"));
+    }
+    return entityList;
   }
 
   // This will be updated if we change how we select resolution.

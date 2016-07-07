@@ -31,6 +31,8 @@ import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.tracker.utils.EntityIdHelper;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -76,6 +78,18 @@ public final class EntityLatestTimestampTable extends AbstractDataset {
       timeSinceResult.addEventTime(Bytes.toString(column), row.getLong(column));
     }
     return timeSinceResult;
+  }
+
+  public Map<Entity, Long> getReadTimestamps(String namespace, List<Entity> entityList) {
+    Map<Entity, Long> resultMap = new HashMap<>();
+    for (Entity  uniqueEntity: entityList) {
+      Map<String, Long> timeMap
+        = read(namespace, uniqueEntity.getEntityType(), uniqueEntity.getEntityName()).getTimeSinceEvents();
+      if (timeMap.containsKey("read")) {
+        resultMap.put(uniqueEntity, timeMap.get("read"));
+      }
+    }
+    return resultMap;
   }
 
   private String getKey(String namespace, String entityType, String entityName) {
