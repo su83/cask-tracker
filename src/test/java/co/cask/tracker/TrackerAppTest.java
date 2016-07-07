@@ -69,8 +69,7 @@ public class TrackerAppTest extends TestBase {
           .registerTypeAdapter(EntityId.class, new EntityIdTypeAdapter())
           .create();
   private static ApplicationManager testAppManager;
-  private static ServiceManager auditLogServiceManager;
-  private static ServiceManager auditMetricsServiceManager;
+  private static ServiceManager trackerServiceManager;
 
   private static final Type DATASET_LIST = new TypeToken<List<TopDatasetsResult>>() { }.getType();
   private static final Type PROGRAM_LIST = new TypeToken<List<TopProgramsResult>>() { }.getType();
@@ -87,11 +86,8 @@ public class TrackerAppTest extends TestBase {
     FlowManager testFlowManager = testAppManager.getFlowManager(StreamToAuditLogFlow.FLOW_NAME).start();
     testFlowManager.waitForStatus(true);
 
-    auditLogServiceManager = testAppManager.getServiceManager(AuditLogService.SERVICE_NAME).start();
-    auditLogServiceManager.waitForStatus(true);
-
-    auditMetricsServiceManager = testAppManager.getServiceManager(AuditMetricsService.SERVICE_NAME).start();
-    auditMetricsServiceManager.waitForStatus(true);
+    trackerServiceManager = testAppManager.getServiceManager(TrackerService.SERVICE_NAME).start();
+    trackerServiceManager.waitForStatus(true);
 
     StreamManager streamManager = getStreamManager("testStream");
     List<AuditMessage> testData = generateTestData();
@@ -111,7 +107,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testInvalidDatesError() throws Exception {
-    String response = getServiceResponse(auditLogServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
             "auditlog/stream/stream1?startTime=1&endTime=0",
             HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, response);
@@ -119,7 +115,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testInvalidOffset() throws Exception {
-    String response = getServiceResponse(auditLogServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "auditlog/stream/stream1?offset=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.OFFSET_INVALID, response);
@@ -127,7 +123,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testInvalidLimit() throws Exception {
-    String response = getServiceResponse(auditLogServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "auditlog/stream/stream1?limit=-1",
             HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.LIMIT_INVALID, response);
@@ -135,7 +131,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testTopNDatasets() throws Exception {
-    String response = getServiceResponse(auditMetricsServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/top-entities/datasets?limit=20",
             HttpResponseStatus.OK.getCode());
     List<TopDatasetsResult> result = GSON.fromJson(response, DATASET_LIST);
@@ -145,7 +141,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testTopNPrograms() throws Exception {
-    String response = getServiceResponse(auditMetricsServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/top-entities/programs?limit=20",
             HttpResponseStatus.OK.getCode());
     List<TopProgramsResult> result = GSON.fromJson(response, PROGRAM_LIST);
@@ -154,7 +150,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testTopNApplications() throws Exception {
-    String response = getServiceResponse(auditMetricsServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/top-entities/applications?limit=20",
             HttpResponseStatus.OK.getCode());
     List<TopApplicationsResult> result = GSON.fromJson(response, APPLICATION_LIST);
@@ -164,7 +160,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testTimeSince() throws  Exception {
-    String response = getServiceResponse(auditMetricsServiceManager,
+    String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/time-since?entityType=dataset&entityName=ds1",
                                          HttpResponseStatus.OK.getCode());
     Map<String, Long> resultMap = GSON.fromJson(response, TIMESINCE_MAP);
@@ -173,7 +169,7 @@ public class TrackerAppTest extends TestBase {
 
   @Test
   public void testAuditLogHistogram() throws Exception {
-    String response = getServiceResponse(auditMetricsServiceManager, "v1/auditmetrics/audit-histogram",
+    String response = getServiceResponse(trackerServiceManager, "v1/auditmetrics/audit-histogram",
                                          HttpResponseStatus.OK.getCode());
     AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
     Collection<TimeValue> results = result.getResults();
