@@ -41,6 +41,8 @@ import co.cask.tracker.entity.TopDatasetsResult;
 import co.cask.tracker.entity.TopProgramsResult;
 import co.cask.tracker.entity.TrackerMeterRequest;
 import co.cask.tracker.entity.TrackerMeterResult;
+import co.cask.tracker.entity.ValidateTagsResult;
+import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
@@ -51,6 +53,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Type;
@@ -80,7 +83,6 @@ public class TrackerAppTest extends TestBase {
   private static final Type TIMESINCE_MAP = new TypeToken<Map<String, Long>>() { }.getRawType();
 
   private static final String TEST_JSON_TAGS = "[\"tag1\",\"tag2\",\"tag3\",\"ta*4\"]";
-  private static final String DELETE_TAGS = "tag1";
   private String testTruthMeter = "";
 
   @ClassRule
@@ -186,6 +188,60 @@ public class TrackerAppTest extends TestBase {
     // Total count should be equal to the number of events fed to the cube.
     Assert.assertEquals(14, total);
   }
+
+  /* Tests for Preferred Tags
+   *
+   */
+
+
+  @Test
+  public void testAddPreferredTags() throws Exception {
+    String response = getServiceResponse(trackerServiceManager, "v1/tags/promote",
+                                         "POST", TEST_JSON_TAGS, HttpResponseStatus.OK.getCode());
+  }
+
+  @Test
+  public void testValidate() throws Exception {
+    String response = getServiceResponse(trackerServiceManager, "v1/tags/validate",
+                                         "POST", TEST_JSON_TAGS, HttpResponseStatus.OK.getCode());
+    ValidateTagsResult result = GSON.fromJson(response, ValidateTagsResult.class);
+    Assert.assertEquals(3, result.getValid());
+    Assert.assertEquals(1, result.getInvalid());
+  }
+
+  @Test
+  @Ignore
+  // Ignored because there is no way to communicate with CDAP metadata from an app unit test
+  public void testGetTags() throws Exception {
+    getServiceResponse(trackerServiceManager, "v1/tags/promote", "POST", TEST_JSON_TAGS,
+                       HttpResponseStatus.OK.getCode());
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/tags?type=preferred",
+                                         HttpResponseStatus.OK.getCode());
+    TagsResult result = GSON.fromJson(response, TagsResult.class);
+    Assert.assertEquals(3, result.getPreferred());
+  }
+
+  @Test
+  @Ignore
+  // Ignored because there is no way to communicate with CDAP metadata from an app unit test
+  public void testDeletePreferredTags() throws Exception {
+    getServiceResponse(trackerServiceManager, "v1/tags/promote", "POST",
+                       TEST_JSON_TAGS, HttpResponseStatus.OK.getCode());
+    getServiceResponse(trackerServiceManager, "v1/tags/preferred?tag=tag1", "DELETE",
+                       null, HttpResponseStatus.OK.getCode());
+    String response = getServiceResponse(trackerServiceManager, "v1/tags?type=preferred",
+                                         HttpResponseStatus.OK.getCode());
+    TagsResult result = GSON.fromJson(response, TagsResult.class);
+    Assert.assertEquals(2, result.getPreferred());
+  }
+
+  @Test
+  public void testDemoteTags() throws Exception {
+    getServiceResponse(trackerServiceManager, "v1/tags/demote", "POST", TEST_JSON_TAGS,
+                       HttpResponseStatus.OK.getCode());
+  }
+
 
   /* Tests for TruthMeter
    *
