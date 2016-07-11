@@ -44,10 +44,12 @@ import java.util.Set;
  */
 public final class AuditTagsTable extends AbstractDataset {
 
+
   private final Table preferredTagsTable;
   private static final byte[] TOTAL_ENTITIES = Bytes.toBytes("total_entities");
   private static final byte[] DEFAULT_TOTAL_ENTITIES = Bytes.toBytes(0);
   private static final int MAX_TAG_LENGTH = 50;
+
 
   private static final CharMatcher TAG_MATCHER = CharMatcher.inRange('A', 'Z')
     .or(CharMatcher.inRange('a', 'z'))
@@ -55,10 +57,12 @@ public final class AuditTagsTable extends AbstractDataset {
     .or(CharMatcher.is('_'))
     .or(CharMatcher.is('-'));
 
+
   public AuditTagsTable(DatasetSpecification spec, @EmbeddedDataset("preferredTagsTable") Table preferredTagsTable) {
     super(spec.getName(), preferredTagsTable);
     this.preferredTagsTable = preferredTagsTable;
   }
+
 
   public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
                                     throws IOException, UnauthenticatedException,
@@ -77,6 +81,7 @@ public final class AuditTagsTable extends AbstractDataset {
     result.setUserTags(tagMap);
     return result;
   }
+
 
   public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
                                                     throws IOException, NotFoundException,
@@ -111,6 +116,7 @@ public final class AuditTagsTable extends AbstractDataset {
     return preferredResult;
   }
 
+
   public ValidateTagsResult demoteTag(List<String> tagList) {
     List<String> valid = new LinkedList<>();
     List<String> invalid = new LinkedList<>();
@@ -126,6 +132,7 @@ public final class AuditTagsTable extends AbstractDataset {
     return new ValidateTagsResult(valid, invalid);
   }
 
+
   public boolean deleteTag(String tag) {
     if (!preferredTagsTable.get(tag.getBytes()).isEmpty()) {
       preferredTagsTable.delete(tag.getBytes());
@@ -133,6 +140,7 @@ public final class AuditTagsTable extends AbstractDataset {
     }
     return false;
   }
+
 
   public ValidateTagsResult addPreferredTags(List<String> tagList) {
     List<String> valid = new LinkedList<>();

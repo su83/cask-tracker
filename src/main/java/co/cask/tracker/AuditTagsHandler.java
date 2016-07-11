@@ -53,7 +53,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String NO_TAGS_RECEIVED = "No Tags Received";
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
-  private static final String PREFERRED_TAG_NOTFOUND = "Preferred Tag Not Found";
+  private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
 
   private AuditTagsTable auditTagsTable;
   private MetadataClientHelper metadataClient;
@@ -77,7 +77,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     responder.sendJson(auditTagsTable.demoteTag(tagsList));
   }
 
-
   @Path("v1/tags/preferred")
   @DELETE
   public void deleteTagsWithoutEntities(HttpServiceRequest request, HttpServiceResponder responder,
@@ -98,7 +97,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       responder.sendString(HttpResponseStatus.NOT_FOUND.getCode(), PREFERRED_TAG_NOTFOUND, Charsets.UTF_8);
     }
   }
-
 
   @Path("v1/tags/promote")
   @POST
