@@ -36,13 +36,13 @@ import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditHistogramResult;
+import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
 import co.cask.tracker.entity.TopProgramsResult;
 import co.cask.tracker.entity.TrackerMeterRequest;
 import co.cask.tracker.entity.TrackerMeterResult;
 import co.cask.tracker.entity.ValidateTagsResult;
-import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Charsets;
 import com.google.common.io.ByteStreams;
@@ -146,7 +146,6 @@ public class TrackerAppTest extends TestBase {
     Assert.assertEquals(4, result.size());
   }
 
-
   @Test
   public void testTopNPrograms() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
@@ -192,7 +191,6 @@ public class TrackerAppTest extends TestBase {
   /* Tests for Preferred Tags
    *
    */
-
 
   @Test
   public void testAddPreferredTags() throws Exception {
