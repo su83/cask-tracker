@@ -21,18 +21,16 @@ import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.AuditMetricsCube;
-import co.cask.tracker.entity.EntityLatestTimestampTable;
+import co.cask.tracker.entity.LatestEntityTable;
 import co.cask.tracker.entity.TimeSinceResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopProgramsResult;
 import co.cask.tracker.utils.ParameterCheck;
-import co.cask.tracker.utils.TimeMathParser;
 import com.google.common.base.Strings;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -46,7 +44,7 @@ import javax.ws.rs.QueryParam;
  */
 public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   private AuditMetricsCube auditMetricsCube;
-  private EntityLatestTimestampTable entityLatestTimestampTable;
+  private LatestEntityTable latestEntityTable;
   private String namespace;
 
 
@@ -55,7 +53,7 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
     super.initialize(context);
     namespace = context.getNamespace();
     auditMetricsCube = context.getDataset(TrackerApp.AUDIT_METRICS_DATASET_NAME);
-    entityLatestTimestampTable = context.getDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME);
+    latestEntityTable = context.getDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME);
 
   }
 
@@ -124,7 +122,7 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
                            ParameterCheck.SPECIFY_ENTITY_NAME_AND_TYPE, StandardCharsets.UTF_8);
       return;
     }
-    TimeSinceResult result = entityLatestTimestampTable.read(namespace, entityType, entityName);
+    TimeSinceResult result = latestEntityTable.read(namespace, entityType, entityName);
     responder.sendJson(result.getTimeSinceEvents());
   }
 

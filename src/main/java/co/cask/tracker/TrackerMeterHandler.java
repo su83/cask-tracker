@@ -22,7 +22,7 @@ import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.tracker.entity.AuditMetricsCube;
 import co.cask.tracker.entity.Entity;
-import co.cask.tracker.entity.EntityLatestTimestampTable;
+import co.cask.tracker.entity.LatestEntityTable;
 import co.cask.tracker.entity.TrackerMeterRequest;
 import co.cask.tracker.entity.TrackerMeterResult;
 import com.google.gson.Gson;
@@ -48,7 +48,7 @@ import javax.ws.rs.Path;
 public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
 
   private AuditMetricsCube auditMetricsCube;
-  private EntityLatestTimestampTable entityTimestampTable;
+  private LatestEntityTable entityTimestampTable;
   private String namespace;
 
   // Score % parameters

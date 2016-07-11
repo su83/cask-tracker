@@ -21,7 +21,7 @@ import co.cask.cdap.api.dataset.DatasetProperties;
 import co.cask.tracker.config.TrackerAppConfig;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
-import co.cask.tracker.entity.EntityLatestTimestampTable;
+import co.cask.tracker.entity.LatestEntityTable;
 
 import java.util.concurrent.TimeUnit;
 
@@ -41,8 +41,7 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
     setName(APP_NAME);
     setDescription("A CDAP Extension that provides the ability to track data throughout the CDAP platform.");
     createDataset(AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
-    String resolutions = String.format("%s,%s,%s,%s",
-            TimeUnit.MINUTES.toSeconds(1L),
+    String resolutions = String.format("%s,%s,%s",
             TimeUnit.HOURS.toSeconds(1L),
             TimeUnit.DAYS.toSeconds(1L),
             TimeUnit.DAYS.toSeconds(365L));
@@ -54,7 +53,7 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
                     "namespace,entity_type,entity_name,audit_type,program_name,app_name,program_type")
             .build();
     createDataset(AUDIT_METRICS_DATASET_NAME, AuditMetricsCube.class, prop);
-    createDataset(ENTITY_LATEST_TIMESTAMP_DATASET_NAME, EntityLatestTimestampTable.class);
+    createDataset(ENTITY_LATEST_TIMESTAMP_DATASET_NAME, LatestEntityTable.class);
     addFlow(new AuditLogFlow(getConfig()));
     addService(new TrackerService());
 

@@ -21,7 +21,7 @@ import co.cask.cdap.api.app.AbstractApplication;
 import co.cask.cdap.api.dataset.DatasetProperties;
 import co.cask.tracker.entity.AuditLogTable;
 import co.cask.tracker.entity.AuditMetricsCube;
-import co.cask.tracker.entity.EntityLatestTimestampTable;
+import co.cask.tracker.entity.LatestEntityTable;
 
 import java.util.concurrent.TimeUnit;
 
@@ -34,8 +34,7 @@ public class TestAuditLogPublisherApp extends AbstractApplication {
     setName("TestAuditLogPublisherApp");
     setDescription("A temp app to test the AuditLogPublisher flowlet");
     createDataset(TrackerApp.AUDIT_LOG_DATASET_NAME, AuditLogTable.class);
-    String resolutions = String.format("%s,%s,%s,%s",
-            TimeUnit.MINUTES.toSeconds(1L),
+    String resolutions = String.format("%s,%s,%s",
             TimeUnit.HOURS.toSeconds(1L),
             TimeUnit.DAYS.toSeconds(1L),
             TimeUnit.DAYS.toSeconds(365L));
@@ -48,7 +47,7 @@ public class TestAuditLogPublisherApp extends AbstractApplication {
                     .add("dataset.cube.aggregation.agg2.dimensions",
                             "namespace,entity_type,entity_name,audit_type,program_name,app_name,program_type")
                     .build());
-    createDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME, EntityLatestTimestampTable.class);
+    createDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME, LatestEntityTable.class);
     addFlow(new StreamToAuditLogFlow());
     addService(new TrackerService());
   }
