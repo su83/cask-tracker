@@ -48,7 +48,7 @@ import javax.ws.rs.Path;
 public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
 
   private AuditMetricsCube auditMetricsCube;
-  private LatestEntityTable entityTimestampTable;
+  private LatestEntityTable latestEntityTable;
   private String namespace;
 
   // Score % parameters
@@ -60,12 +60,15 @@ public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
   private static final String DATASET = EntityType.DATASET.name().toLowerCase();
   private static final String STREAM = EntityType.STREAM.name().toLowerCase();
 
+  private static final String EMPTY_REQUEST = "Request body was empty. " +
+    "At least one dataset or stream name must be present";
+
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
     super.initialize(context);
     namespace = context.getNamespace();
     auditMetricsCube = context.getDataset(TrackerApp.AUDIT_METRICS_DATASET_NAME);
-    entityTimestampTable = context.getDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME);
+    latestEntityTable = context.getDataset(TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME);
   }
 
   @Path("v1/tracker-meter")
@@ -73,12 +76,15 @@ public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
   public void trackerMeter(HttpServiceRequest request, HttpServiceResponder responder) {
     ByteBuffer requestContents = request.getContent();
     if (requestContents == null) {
-      responder.sendError(HttpResponseStatus.BAD_REQUEST.getCode(),
-                          "Request body was empty. At least one dataset or stream name must be present");
+      responder.sendError(HttpResponseStatus.BAD_REQUEST.getCode(), EMPTY_REQUEST);
       return;
     }
     TrackerMeterRequest trackerMeterRequest = GSON.fromJson(StandardCharsets.UTF_8.decode(requestContents).toString(),
                                                             TrackerMeterRequest.class);
+    if (trackerMeterRequest.getStreams().size() == 0 && trackerMeterRequest.getDatasets().size() == 0) {
+      responder.sendError(HttpResponseStatus.BAD_REQUEST.getCode(), EMPTY_REQUEST);
+      return;
+    }
     responder.sendJson(getTrackerScoreMap(trackerMeterRequest));
   }
   // Gets the score and modifies the result to the format expected by the UI
@@ -129,18 +135,39 @@ public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
       getUniqueEntityList(auditMetricsCube.getEntities(namespace, DATASET), DATASET);
     metricsQuery.addAll(getUniqueEntityList(auditMetricsCube.getEntities(namespace, STREAM), STREAM));
 
-    // Get a map of time since read stamps for each of them to determine an entity's rank
-    Map<Entity, Long> sortedTimeMap = sortMapByValue(entityTimestampTable.getReadTimestamps(namespace, metricsQuery));
-    int size = sortedTimeMap.size();
+    Map<Entity, Integer> rankMap
+      = getRankMap(sortMapByValue(latestEntityTable.getReadTimestamps(namespace, metricsQuery)));
+    int size = rankMap.size();
     int rank = size;
-    for (Map.Entry<Entity, Long> entry : sortedTimeMap.entrySet()) {
+    for (Map.Entry<Entity, Integer> entry : rankMap.entrySet()) {
       // Updates score for entities for which score was requested
       if (resultMap.containsKey(entry.getKey())) {
-        Entity uniqueEntity = entry.getKey();
-        int newScore = resultMap.get(uniqueEntity) + (int) ((float) rank / (float) size * TIME_SINCE_READ_WEIGHT);
-        resultMap.put(uniqueEntity, newScore);
+        Entity entity = entry.getKey();
+        int newScore = resultMap.get(entity) + (int) ((float) rank / (float) size * TIME_SINCE_READ_WEIGHT);
+        resultMap.put(entity, newScore);
       }
-      rank -= 1;
+    }
+    return resultMap;
+  }
+
+  // Returns same rank for entities with equal timestamp.
+  private Map<Entity, Integer> getRankMap(Map<Entity, Long> sortedTimeMap) {
+    Map<Entity, Integer> resultMap = new LinkedHashMap<>();
+    // If two entities with same timestamp is given a rank n, the entity after them should have rank n-2 and not
+    // n-1. rankChangeStep stores the number of consecutive equal timestamps and fixes this.
+    int rank = sortedTimeMap.size();
+    int rankChangeStep = 1;
+    long lastTimestamp = -1L;
+    for (Map.Entry<Entity, Long> entry : sortedTimeMap.entrySet()) {
+      resultMap.put(entry.getKey(), rank);
+      if (lastTimestamp == entry.getValue()) {
+        rankChangeStep += 1;
+      } else {
+        // Reset rankChangeStep to 1 after subtracting rank to its correct value
+        lastTimestamp = entry.getValue();
+        rank -= rankChangeStep;
+        rankChangeStep = 1;
+      }
     }
     return resultMap;
   }

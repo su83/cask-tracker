@@ -42,10 +42,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -59,7 +62,6 @@ public class AuditMetricsCube extends AbstractDataset {
     HOUR(TimeUnit.HOURS);
 
     private final TimeUnit timeUnit;
-
     Bucket(TimeUnit timeUnit) {
       this.timeUnit = timeUnit;
     }
@@ -380,10 +382,10 @@ public class AuditMetricsCube extends AbstractDataset {
       .build();
 
     Collection<TimeSeries> results = auditMetrics.query(query);
-    Map<String, Integer> uniquePrograms = new HashMap<>();
+    Set<String> uniquePrograms = new HashSet<>();
     for (TimeSeries t : results) {
-      uniquePrograms.put(getKey(t.getDimensionValues().get("program_name"), t.getDimensionValues().get("program_type")),
-                         0);
+      uniquePrograms.add(getKey(t.getDimensionValues().get("program_name"),
+                                t.getDimensionValues().get("program_type")));
     }
     return uniquePrograms.size();
   }
@@ -407,14 +409,17 @@ public class AuditMetricsCube extends AbstractDataset {
       .dimension("program_type")
       .limit(1000)
       .build();
-
-    Collection<TimeSeries> results = auditMetrics.query(query);
-    Map<String, Integer> uniquePrograms = new HashMap<>();
-    for (TimeSeries t : results) {
-      uniquePrograms.put(getKey(t.getDimensionValues().get("program_name"), t.getDimensionValues().get("program_type")),
-                         0);
+    try {
+      Collection<TimeSeries> results = auditMetrics.query(query);
+      Set<String> uniquePrograms = new HashSet<>();
+      for (TimeSeries t : results) {
+        uniquePrograms.add(getKey(t.getDimensionValues().get("program_name"),
+                                  t.getDimensionValues().get("program_type")));
+      }
+      return uniquePrograms.size();
+    } catch (NoSuchElementException e) {
+      return 0L; // No Cube entry for given query exists. 0 total programs.
     }
-    return uniquePrograms.size();
   }
 
   // Total Audit log messages
@@ -465,9 +470,13 @@ public class AuditMetricsCube extends AbstractDataset {
       .limit(1000)
       .build();
 
-    Collection<TimeSeries> results = auditMetrics.query(query);
-    // Single measurement queried; Aggregated for the 1st 365 days
-    return results.iterator().next().getTimeValues().get(0).getValue();
+    try {
+      Collection<TimeSeries> results = auditMetrics.query(query);
+      // Single measurement queried; Aggregated for the 1st 365 days
+      return results.iterator().next().getTimeValues().get(0).getValue();
+    } catch (NoSuchElementException e) {
+      return 0L; // No Cube entry for given query exists. 0 total programs.
+    }
   }
 
   public List<String> getEntities(String namespace, String entityType) {

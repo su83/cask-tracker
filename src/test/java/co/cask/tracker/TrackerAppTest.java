@@ -36,6 +36,7 @@ import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditHistogramResult;
+import co.cask.tracker.entity.Entity;
 import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
@@ -83,7 +84,6 @@ public class TrackerAppTest extends TestBase {
   private static final Type TIMESINCE_MAP = new TypeToken<Map<String, Long>>() { }.getRawType();
 
   private static final String TEST_JSON_TAGS = "[\"tag1\",\"tag2\",\"tag3\",\"ta*4\"]";
-  private String testTruthMeter = "";
 
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
@@ -143,7 +143,10 @@ public class TrackerAppTest extends TestBase {
                                          "v1/auditmetrics/top-entities/datasets?limit=20",
                                          HttpResponseStatus.OK.getCode());
     List<TopDatasetsResult> result = GSON.fromJson(response, DATASET_LIST);
-    Assert.assertEquals(4, result.size());
+    Assert.assertEquals(6, result.size());
+    long testTotal1 = result.get(0).getRead() + result.get(0).getWrite();
+    long testTotal2 = result.get(1).getRead() + result.get(1).getWrite();
+    Assert.assertEquals(true, testTotal1 > testTotal2);
   }
 
   @Test
@@ -153,6 +156,7 @@ public class TrackerAppTest extends TestBase {
                                          HttpResponseStatus.OK.getCode());
     List<TopProgramsResult> result = GSON.fromJson(response, PROGRAM_LIST);
     Assert.assertEquals(5, result.size());
+    Assert.assertEquals(true, result.get(0).getValue() > result.get(1).getValue());
   }
 
   @Test
@@ -162,7 +166,7 @@ public class TrackerAppTest extends TestBase {
                                          HttpResponseStatus.OK.getCode());
     List<TopApplicationsResult> result = GSON.fromJson(response, APPLICATION_LIST);
     Assert.assertEquals(4, result.size());
-
+    Assert.assertEquals(true, result.get(0).getValue() > result.get(1).getValue());
   }
 
   @Test
@@ -185,7 +189,7 @@ public class TrackerAppTest extends TestBase {
       total += t.getValue();
     }
     // Total count should be equal to the number of events fed to the cube.
-    Assert.assertEquals(14, total);
+    Assert.assertEquals(17, total);
   }
 
   /* Tests for Preferred Tags
@@ -244,26 +248,59 @@ public class TrackerAppTest extends TestBase {
   /* Tests for TruthMeter
    *
    */
-
   @Test
   public void testTruthMeter() throws Exception {
-    initializeTruthMeterInput();
-    String response = getServiceResponse(trackerServiceManager, "v1/tracker-meter",
-                                         "POST", testTruthMeter,
-                                         HttpResponseStatus.OK.getCode());
-    TrackerMeterResult result = GSON.fromJson(response, TrackerMeterResult.class);
-    Assert.assertEquals(3, result.getDatasets().size());
-    Assert.assertEquals(1, result.getStreams().size());
-  }
-
-  private void initializeTruthMeterInput() {
     List<String> datasets = new LinkedList<>();
     List<String> streams = new LinkedList<>();
     datasets.add("ds1");
     datasets.add("ds6");
-    datasets.add("ds3");
+    datasets.add("ds8");
     streams.add("strm123");
-    testTruthMeter = GSON.toJson(new TrackerMeterRequest(datasets, streams));
+    TrackerMeterResult result = getTrackerMeterResponse(datasets, streams, HttpResponseStatus.OK.getCode());
+    Assert.assertEquals(3, result.getDatasets().size());
+    Assert.assertEquals(1, result.getStreams().size());
+  }
+
+  @Test
+  public void testTimeRank() throws Exception {
+    // ds8 and ds9 have the same timestamp and one identical audit msg each. Their score must be identical.
+    List<String> datasets = new LinkedList<>();
+    List<String> streams = new LinkedList<>();
+    datasets.add("ds6");
+    datasets.add("ds8");
+    datasets.add("ds9");
+    datasets.add("ds1");
+    streams.add("strm123");
+    streams.add("stream1");
+    TrackerMeterResult result = getTrackerMeterResponse(datasets, streams, HttpResponseStatus.OK.getCode());
+    Assert.assertEquals(result.getDatasets().get("ds8"), result.getDatasets().get("ds9"));
+  }
+
+  @Test
+  public void testInvalidName() throws Exception {
+    List<String> datasets = new LinkedList<>();
+    List<String> streams = new LinkedList<>();
+    datasets.add("ds_invalid");
+    datasets.add("ds_does_not_exit");
+    datasets.add("ds_test");
+    streams.add("strm_test");
+    TrackerMeterResult result = getTrackerMeterResponse(datasets, streams, HttpResponseStatus.OK.getCode());
+    for (Map.Entry<String, Integer> entry : result.getDatasets().entrySet()) {
+      Assert.assertEquals(0, (int) entry.getValue());
+    }
+    for (Map.Entry<String, Integer> entry : result.getStreams().entrySet()) {
+      Assert.assertEquals(0, (int) entry.getValue());
+    }
+  }
+
+  private TrackerMeterResult getTrackerMeterResponse(List<String> datasets,
+                                                     List<String> streams,
+                                                     int expectedResponse) throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/tracker-meter", "POST",
+                                         GSON.toJson(new TrackerMeterRequest(datasets, streams)),
+                                         expectedResponse);
+    return GSON.fromJson(response, TrackerMeterResult.class);
   }
 
   // Request is GET by default
@@ -428,6 +465,27 @@ public class TrackerAppTest extends TestBase {
                                                     EntityId.fromString("program:ns1.b.SERVICE.program2"))
                  )
     );
+    testData.add(new AuditMessage(1456956659509L,
+                                  NamespaceId.DEFAULT.dataset("ds8"),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.READ,
+                                                    EntityId.fromString("program:ns1.b.SERVICE.program2"))
+                 )
+    );
+    testData.add(new AuditMessage(1456956659507L,
+                                  NamespaceId.DEFAULT.dataset("ds9"),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.READ,
+                                                    EntityId.fromString("program:ns1.b.SERVICE.program2"))
+                 )
+    );
+    testData.add(new AuditMessage(1456956659471L,
+                                  EntityId.fromString("dataset:default.ds5"),
+                                  "user1",
+                                  AuditType.CREATE,
+                                  AuditPayload.EMPTY_PAYLOAD));
     return testData;
   }
 }
