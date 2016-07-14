@@ -175,7 +175,7 @@ public class TrackerAppTest extends TestBase {
   }
 
   @Test
-  public void testAuditLogHistogram() throws Exception {
+  public void testGlobalAuditLogHistogram() throws Exception {
     String response = getServiceResponse(trackerServiceManager, "v1/auditmetrics/audit-histogram",
                                          HttpResponseStatus.OK.getCode());
     AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
@@ -188,6 +188,20 @@ public class TrackerAppTest extends TestBase {
     Assert.assertEquals(14, total);
   }
 
+  @Test
+  public void testSpecificAuditLogHistogram() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset&entityName=ds1",
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Collection<TimeValue> results = result.getResults();
+    int total = 0;
+    for (TimeValue t : results) {
+      total += t.getValue();
+    }
+    // Total count should be equal to the number of events fed to the cube for ds1.
+    Assert.assertEquals(5, total);
+  }
   /* Tests for Preferred Tags
    *
    */
