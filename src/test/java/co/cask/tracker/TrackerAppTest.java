@@ -36,6 +36,7 @@ import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditHistogramResult;
+import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
@@ -111,6 +112,20 @@ public class TrackerAppTest extends TestBase {
   public void destroyApp() throws Exception {
     testAppManager.stopAll();
     clear();
+  }
+
+  @Test
+  public void testAuditLog() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "auditlog/stream/stream1",
+                                         HttpResponseStatus.OK.getCode());
+    AuditLogResponse result = GSON.fromJson(response, AuditLogResponse.class);
+    Assert.assertNotEquals(0, result.getTotalResults());
+    response = getServiceResponse(trackerServiceManager,
+                                  "auditlog/dataset/ds1",
+                                  HttpResponseStatus.OK.getCode());
+    result = GSON.fromJson(response, AuditLogResponse.class);
+    Assert.assertNotEquals(0, result.getTotalResults());
   }
 
   @Test
