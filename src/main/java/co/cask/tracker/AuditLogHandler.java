@@ -76,14 +76,14 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
                            StandardCharsets.UTF_8);
       return;
     }
-    long startTimeLong = ParameterCheck.parseTime(startTime);
-    long endTimeLong = ParameterCheck.parseTime(endTime);
-    if (!ParameterCheck.isTimeFormatValid(startTimeLong, endTimeLong)) {
+    long startTimeLongMillis = ParameterCheck.parseTime(startTime) * 1000;
+    long endTimeLongMillis = ParameterCheck.parseTime(endTime) * 1000;
+    if (!ParameterCheck.isTimeFormatValid(startTimeLongMillis, endTimeLongMillis)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), ParameterCheck.INVALID_TIME_FORMAT,
                            StandardCharsets.UTF_8);
       return;
     }
-    if (!ParameterCheck.isTimeFrameValid(startTimeLong, endTimeLong)) {
+    if (!ParameterCheck.isTimeFrameValid(startTimeLongMillis, endTimeLongMillis)) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(),
                            ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, StandardCharsets.UTF_8);
       return;
@@ -94,8 +94,8 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     CloseableIterator<AuditMessage> messageIter = auditLogTable.scan(namespace,
             entityType,
             name,
-            startTimeLong,
-            endTimeLong);
+            startTimeLongMillis,
+            endTimeLongMillis);
     try {
       // First skip to the offset
       if (offset > 0) {
