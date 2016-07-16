@@ -51,10 +51,10 @@ public class MetadataClientHelper {
     this.mdc = new MetadataClient(ClientConfig.getDefault());
   }
 
-  public Set<String> getTags(NamespaceId namespace) throws IOException, UnauthenticatedException,
+  public Set<String> getTags(NamespaceId namespace, String query) throws IOException, UnauthenticatedException,
     NotFoundException, BadRequestException {
     Set<MetadataSearchResultRecord> metadataSet =
-      mdc.searchMetadata(namespace.toId(), "*",
+      mdc.searchMetadata(namespace.toId(), query,
                          ImmutableSet.<MetadataSearchTargetType>of(MetadataSearchTargetType.DATASET,
                                                                                    MetadataSearchTargetType.STREAM));
     Set<String> tagSet = new HashSet<>();

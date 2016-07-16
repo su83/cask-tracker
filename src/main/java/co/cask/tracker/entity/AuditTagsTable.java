@@ -64,11 +64,11 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
                                     throws IOException, UnauthenticatedException,
                                            NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getTags(namespace);
+    Set<String> userSet = metadataClient.getTags(namespace, instance);
     for (String usertag : userSet) {
       if (preferredTagsTable.get(usertag.getBytes()).isEmpty()) {
         if (usertag.toLowerCase().startsWith(prefix.toLowerCase())) {
@@ -83,16 +83,17 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
                                                     throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
+    Set<String> userSet = metadataClient.getTags(namespace, instance);
     Scanner scanner = preferredTagsTable.scan(null, null);
     try {
       Row row;
       while ((row = scanner.next()) != null) {
         String tag = Bytes.toString(row.getRow());
-        if (tag.toLowerCase().startsWith(prefix.toLowerCase())) {
+        if (tag.toLowerCase().startsWith(prefix.toLowerCase()) && userSet.contains(tag)) {
           tagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
         }
       }
@@ -106,11 +107,11 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance )
                                                   throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
-    TagsResult userResult = getUserTags(metadataClient, prefix, namespace);
-    TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace);
+    TagsResult userResult = getUserTags(metadataClient, prefix, namespace, instance);
+    TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace, instance);
     preferredResult.setUser(userResult.getUser());
     preferredResult.setUserTags(userResult.getUserTags());
     return preferredResult;

@@ -132,22 +132,23 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   @Path("v1/tags")
   @GET
   public void getTags(HttpServiceRequest request, HttpServiceResponder responder,
-                      @QueryParam("type") @DefaultValue("all") String type,
-                      @QueryParam("prefix") @DefaultValue("") String prefix) throws IOException, NotFoundException,
+                      @QueryParam("type") @DefaultValue("alltype") String type,
+                      @QueryParam("prefix") @DefaultValue("") String prefix,
+                      @QueryParam("instance") @DefaultValue("*") String instance) throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     MetadataClientHelper metadataClient = getMetadataClient(request);
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getUserTags(metadataClient,
-                                                    prefix, new NamespaceId(getContext().getNamespace())));
+                                                    prefix, new NamespaceId(getContext().getNamespace()), instance));
     } else if (type.equals("preferred")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getPreferredTags(metadataClient,
-                                                         prefix, new NamespaceId(getContext().getNamespace())));
-    } else if (type.equals("all")) {
+                                                         prefix, new NamespaceId(getContext().getNamespace()), instance));
+    } else if (type.equals("alltype")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getTags(metadataClient,
-                                                prefix, new NamespaceId(getContext().getNamespace())));
+                                                prefix, new NamespaceId(getContext().getNamespace()), instance));
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
