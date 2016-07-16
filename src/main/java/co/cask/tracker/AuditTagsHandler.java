@@ -30,6 +30,9 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
@@ -47,8 +50,9 @@ import javax.ws.rs.QueryParam;
  */
 public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final Gson GSON = new Gson();
-  private static final Type STRING_LIST = new TypeToken<List<String>>() { }.getType();
-
+  private static final Type STRING_LIST = new TypeToken<List<String>>() {
+  }.getType();
+  private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
   // Error messages
   private static final String NO_TAGS_RECEIVED = "No Tags Received";
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
@@ -151,15 +155,24 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
 
   private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
     if (metadataClient == null) {
+      LOG.info("HEADER TEST: " + request.getAllHeaders());
       String hostport = request.getHeader("host");
-      if (hostport == null) {
+      String hostport1 = request.getHeader("Host");
+      if (hostport == null && hostport1 == null) {
         return new MetadataClientHelper();
       }
-      String hostname = hostport.split(":")[0];
-      Integer port = Integer.parseInt(hostport.split(":")[1]);
+      String trueHeader = (hostport1 == null) ? hostport : hostport1;
+
+      String hostname = trueHeader.split(":")[0];
+      Integer port = Integer.parseInt(trueHeader.split(":")[1]);
+
       metadataClient = new MetadataClientHelper(hostname, port);
+
     }
     return metadataClient;
   }
 }
+
+
+
 
