@@ -156,20 +156,15 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
     if (metadataClient == null) {
       LOG.info("HEADER TEST: " + request.getAllHeaders());
-      String hostport = request.getHeader("host");
-      String hostport1 = request.getHeader("Host");
-      if (hostport == null && hostport1 == null) {
-        return new MetadataClientHelper();
+      String hostport = request.getHeader("host") != null ?
+                request.getHeader("host") : request.getHeader("Host");
+      if (hostport == null) {
+        metadataClient = new MetadataClientHelper();
       }
-      String trueHeader = (hostport1 == null) ? hostport : hostport1;
-
-      String hostname = trueHeader.split(":")[0];
-      Integer port = Integer.parseInt(trueHeader.split(":")[1]);
-
-      metadataClient = new MetadataClientHelper(hostname, port);
-
+      metadataClient = new MetadataClientHelper(hostport.split(":")[0],
+                                                Integer.parseInt(hostport.split(":")[1]));
     }
-    return metadataClient;
+    return  metadataClient;
   }
 }
 
