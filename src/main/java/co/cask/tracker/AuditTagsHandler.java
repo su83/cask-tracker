@@ -143,8 +143,8 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                                                     prefix, new NamespaceId(getContext().getNamespace()), instance));
     } else if (type.equals("preferred")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getPreferredTags(metadataClient,
-                                                         prefix, new NamespaceId(getContext().getNamespace()), instance));
+                         auditTagsTable.getPreferredTags(metadataClient, prefix,
+                                                         new NamespaceId(getContext().getNamespace()), instance));
     } else if (type.equals("alltype")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getTags(metadataClient,

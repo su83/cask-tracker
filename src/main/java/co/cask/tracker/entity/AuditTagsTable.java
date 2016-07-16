@@ -64,7 +64,8 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
+  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix,
+                                NamespaceId namespace, String instance)
                                     throws IOException, UnauthenticatedException,
                                            NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
@@ -83,7 +84,8 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
+  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix,
+                                     NamespaceId namespace, String instance)
                                                     throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
@@ -107,7 +109,7 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance )
+  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
                                                   throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     TagsResult userResult = getUserTags(metadataClient, prefix, namespace, instance);
