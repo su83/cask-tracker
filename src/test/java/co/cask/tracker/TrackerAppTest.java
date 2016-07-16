@@ -37,6 +37,7 @@ import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.Entity;
+import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
@@ -114,6 +115,20 @@ public class TrackerAppTest extends TestBase {
   }
 
   @Test
+  public void testAuditLog() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "auditlog/stream/stream1",
+                                         HttpResponseStatus.OK.getCode());
+    AuditLogResponse result = GSON.fromJson(response, AuditLogResponse.class);
+    Assert.assertNotEquals(0, result.getTotalResults());
+    response = getServiceResponse(trackerServiceManager,
+                                  "auditlog/dataset/ds1",
+                                  HttpResponseStatus.OK.getCode());
+    result = GSON.fromJson(response, AuditLogResponse.class);
+    Assert.assertNotEquals(0, result.getTotalResults());
+  }
+
+  @Test
   public void testInvalidDatesError() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
                                          "auditlog/stream/stream1?startTime=1&endTime=0",
@@ -179,7 +194,7 @@ public class TrackerAppTest extends TestBase {
   }
 
   @Test
-  public void testAuditLogHistogram() throws Exception {
+  public void testGlobalAuditLogHistogram() throws Exception {
     String response = getServiceResponse(trackerServiceManager, "v1/auditmetrics/audit-histogram",
                                          HttpResponseStatus.OK.getCode());
     AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
@@ -192,6 +207,20 @@ public class TrackerAppTest extends TestBase {
     Assert.assertEquals(17, total);
   }
 
+  @Test
+  public void testSpecificAuditLogHistogram() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset&entityName=ds1",
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Collection<TimeValue> results = result.getResults();
+    int total = 0;
+    for (TimeValue t : results) {
+      total += t.getValue();
+    }
+    // Total count should be equal to the number of events fed to the cube for ds1.
+    Assert.assertEquals(5, total);
+  }
   /* Tests for Preferred Tags
    *
    */

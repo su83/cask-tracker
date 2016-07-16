@@ -363,6 +363,30 @@ public class AuditMetricsCube extends AbstractDataset {
     return new AuditHistogramResult(resolution.name(), timeValueList);
   }
 
+  // Overload (String entityType, String entityName)
+  public AuditHistogramResult getAuditHistogram(long startTime, long endTime, String namespace,
+                                                String entityType, String entityName) {
+    Bucket resolution = getResolutionBucket(startTime, endTime);
+    CubeQuery histogramQuery = CubeQuery.builder()
+      .select()
+      .measurement("count", AggregationFunction.SUM)
+      .from()
+      .resolution(resolution.getResolutionsSeconds(), TimeUnit.SECONDS)
+      .where()
+      .dimension("namespace", namespace)
+      .dimension("entity_type", entityType)
+      .dimension("entity_name", entityName)
+      .timeRange(startTime, endTime)
+      .limit(1000)
+      .build();
+
+    Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
+    TimeSeries t = results.iterator().next();
+    List<TimeValue> timeValueList = t.getTimeValues();
+
+    return new AuditHistogramResult(resolution.name(), timeValueList);
+  }
+
   // Total number of unique programs
   public long getTotalProgramsCount(String namespace) {
     CubeQuery query = CubeQuery.builder()
