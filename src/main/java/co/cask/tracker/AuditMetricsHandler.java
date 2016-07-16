@@ -129,6 +129,8 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
   @Path("v1/auditmetrics/audit-histogram")
   @GET
   public void auditLogHistogram(HttpServiceRequest request, HttpServiceResponder responder,
+                                @QueryParam("entityName") @DefaultValue("") String entityName,
+                                @QueryParam("entityType") @DefaultValue("") String entityType,
                                 @QueryParam("startTime") @DefaultValue("0") String startTimeString,
                                 @QueryParam("endTime") @DefaultValue("now") String endTimeString) {
     long endTime = ParameterCheck.parseTime(endTimeString);
@@ -143,7 +145,12 @@ public final class AuditMetricsHandler extends AbstractHttpServiceHandler {
                            StandardCharsets.UTF_8);
       return;
     }
-    AuditHistogramResult result = auditMetricsCube.getAuditHistogram(startTime, endTime, namespace);
+    AuditHistogramResult result;
+    if (ParameterCheck.isDatasetSpecified(entityType, entityName)) {
+      result = auditMetricsCube.getAuditHistogram(startTime, endTime, namespace, entityType, entityName);
+    } else {
+      result = auditMetricsCube.getAuditHistogram(startTime, endTime, namespace);
+    }
     responder.sendJson(result);
   }
 
