@@ -37,7 +37,6 @@ import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
 import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.AuditLogResponse;
-import co.cask.tracker.entity.Entity;
 import co.cask.tracker.entity.TagsResult;
 import co.cask.tracker.entity.TopApplicationsResult;
 import co.cask.tracker.entity.TopDatasetsResult;
