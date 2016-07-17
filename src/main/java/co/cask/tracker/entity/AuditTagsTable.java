@@ -65,11 +65,11 @@ public final class AuditTagsTable extends AbstractDataset {
 
 
   public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix,
-                                NamespaceId namespace, String instance)
+                                NamespaceId namespace)
                                     throws IOException, UnauthenticatedException,
                                            NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getTags(namespace, instance);
+    Set<String> userSet = metadataClient.getTags(namespace);
     for (String usertag : userSet) {
       if (preferredTagsTable.get(usertag.getBytes()).isEmpty()) {
         if (usertag.toLowerCase().startsWith(prefix.toLowerCase())) {
@@ -85,17 +85,17 @@ public final class AuditTagsTable extends AbstractDataset {
 
 
   public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix,
-                                     NamespaceId namespace, String instance)
+                                     NamespaceId namespace)
                                                     throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getTags(namespace, instance);
+    Set<String> userSet = metadataClient.getTags(namespace);
     Scanner scanner = preferredTagsTable.scan(null, null);
     try {
       Row row;
       while ((row = scanner.next()) != null) {
         String tag = Bytes.toString(row.getRow());
-        if (tag.toLowerCase().startsWith(prefix.toLowerCase()) && userSet.contains(tag)) {
+        if (tag.toLowerCase().startsWith(prefix.toLowerCase())) {
           tagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
         }
       }
@@ -109,16 +109,58 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace, String instance)
+  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
                                                   throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
-    TagsResult userResult = getUserTags(metadataClient, prefix, namespace, instance);
-    TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace, instance);
+    TagsResult userResult = getUserTags(metadataClient, prefix, namespace);
+    TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace);
     preferredResult.setUser(userResult.getUser());
     preferredResult.setUserTags(userResult.getUserTags());
     return preferredResult;
   }
 
+
+  public TagsResult getDatasetTags(MetadataClientHelper metadataClient, NamespaceId namespace, String entityName)
+                      throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    Map<String, Integer> pTagMap = new HashMap<>();
+    Map<String, Integer> uTagMap = new HashMap<>();
+    Set<String> userSet = metadataClient.getDatasetTags(namespace, entityName);
+    for (String usertag : userSet) {
+      if (preferredTagsTable.get(usertag.getBytes()).isEmpty()) {
+        pTagMap.put(usertag, metadataClient.getEntityNum(usertag, namespace));
+      } else {
+        uTagMap.put(usertag, metadataClient.getEntityNum(usertag, namespace));
+      }
+    }
+    TagsResult result = new TagsResult();
+    result.setUser(uTagMap.size());
+    result.setUserTags(uTagMap);
+    result.setPreferred(pTagMap.size());
+    result.setPreferredTags(pTagMap);
+    return result;
+  }
+
+  public TagsResult getStreamTags (MetadataClientHelper metadataClient, NamespaceId namespace, String entityName)
+                  throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+
+    Map<String, Integer> pTagMap = new HashMap<>();
+    Map<String, Integer> uTagMap = new HashMap<>();
+    Set<String> userSet = metadataClient.getStreamTags(namespace, entityName);
+    for (String usertag : userSet) {
+      if (preferredTagsTable.get(usertag.getBytes()).isEmpty()) {
+          pTagMap.put(usertag, metadataClient.getEntityNum(usertag, namespace));
+      } else {
+        uTagMap.put(usertag, metadataClient.getEntityNum(usertag, namespace));
+      }
+    }
+    TagsResult result = new TagsResult();
+    result.setUser(uTagMap.size());
+    result.setUserTags(uTagMap);
+    result.setPreferred(pTagMap.size());
+    result.setPreferredTags(pTagMap);
+    return result;
+
+  }
 
   public ValidateTagsResult demoteTag(List<String> tagList) {
     List<String> valid = new LinkedList<>();
