@@ -63,11 +63,9 @@ public final class AuditTagsTable extends AbstractDataset {
     this.preferredTagsTable = preferredTagsTable;
   }
 
-
-  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix,
-                                NamespaceId namespace)
-                                    throws IOException, UnauthenticatedException,
-                                           NotFoundException, BadRequestException {
+  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+    throws IOException, UnauthenticatedException,
+    NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
     Set<String> userSet = metadataClient.getTags(namespace);
     for (String usertag : userSet) {
@@ -84,12 +82,10 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix,
-                                     NamespaceId namespace)
-                                                    throws IOException, NotFoundException,
+  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+    throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getTags(namespace);
     Scanner scanner = preferredTagsTable.scan(null, null);
     try {
       Row row;
@@ -110,7 +106,7 @@ public final class AuditTagsTable extends AbstractDataset {
 
 
   public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
-                                                  throws IOException, NotFoundException,
+    throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     TagsResult userResult = getUserTags(metadataClient, prefix, namespace);
     TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace);
@@ -118,6 +114,7 @@ public final class AuditTagsTable extends AbstractDataset {
     preferredResult.setUserTags(userResult.getUserTags());
     return preferredResult;
   }
+
 
 
   public TagsResult getEntityTags(MetadataClientHelper metadataClient, NamespaceId namespace,
