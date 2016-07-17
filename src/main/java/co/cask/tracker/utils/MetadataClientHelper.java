@@ -65,24 +65,18 @@ public class MetadataClientHelper {
     return tagSet;
   }
 
-  public Set<String> getStreamTags(NamespaceId namespace, String query) throws IOException, UnauthenticatedException,
-    NotFoundException, BadRequestException {
-    Set<MetadataSearchResultRecord> metadataSet =
-      mdc.searchMetadata(namespace.toId(), query,
-                         ImmutableSet.<MetadataSearchTargetType>of(MetadataSearchTargetType.STREAM));
-    Set<String> tagSet = new HashSet<>();
-    for (MetadataSearchResultRecord mdsr: metadataSet) {
-      Set<String> set = mdc.getTags(mdsr.getEntityId(), MetadataScope.USER);
-      tagSet.addAll(set);
-    }
-    return tagSet;
-  }
 
-  public Set<String> getDatasetTags(NamespaceId namespace, String query) throws IOException, UnauthenticatedException,
-    NotFoundException, BadRequestException {
+  public Set<String> getEntityTags(NamespaceId namespace, String entityType, String query)
+                      throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    MetadataSearchTargetType searchType;
+    if (entityType.toLowerCase().equals("dataset")) {
+      searchType = MetadataSearchTargetType.DATASET;
+    } else {
+      searchType = MetadataSearchTargetType.STREAM;
+    }
     Set<MetadataSearchResultRecord> metadataSet =
       mdc.searchMetadata(namespace.toId(), query,
-                         ImmutableSet.<MetadataSearchTargetType>of(MetadataSearchTargetType.DATASET));
+                         ImmutableSet.<MetadataSearchTargetType>of(searchType));
     Set<String> tagSet = new HashSet<>();
     for (MetadataSearchResultRecord mdsr: metadataSet) {
       Set<String> set = mdc.getTags(mdsr.getEntityId(), MetadataScope.USER);

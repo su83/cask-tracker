@@ -26,13 +26,10 @@ import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.tracker.entity.AuditTagsTable;
 import co.cask.tracker.utils.MetadataClientHelper;
-import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -52,9 +49,8 @@ import javax.ws.rs.QueryParam;
  */
 public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final Gson GSON = new Gson();
-  private static final Type STRING_LIST = new TypeToken<List<String>>() {
-  }.getType();
-  private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
+  private static final Type STRING_LIST = new TypeToken<List<String>>() { }.getType();
+
   // Error messages
   private static final String NO_TAGS_RECEIVED = "No Tags Received";
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
@@ -164,14 +160,10 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                     @PathParam("name") String entityName)
                         throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
     MetadataClientHelper metadataClient = getMetadataClient(request);
-    if (entityType.equals("dataset")) {
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getDatasetTags(metadataClient,
-                                                     new NamespaceId(getContext().getNamespace()), entityName));
-    } else if (entityType.equals("stream")) {
-      responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getStreamTags(metadataClient,
-                                                       new NamespaceId(getContext().getNamespace()), entityName));
+                         auditTagsTable.getEntityTags(
+                           metadataClient, new NamespaceId(getContext().getNamespace()), entityType, entityName));
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
@@ -180,7 +172,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
 
   private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
     if (metadataClient == null) {
-      LOG.info("HEADER TEST: " + request.getAllHeaders());
       String hostport = request.getHeader("host") != null ?
                 request.getHeader("host") : request.getHeader("Host");
       if (hostport == null) {
