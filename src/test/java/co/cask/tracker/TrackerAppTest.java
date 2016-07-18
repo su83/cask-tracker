@@ -171,6 +171,8 @@ public class TrackerAppTest extends TestBase {
     List<TopProgramsResult> result = GSON.fromJson(response, PROGRAM_LIST);
     Assert.assertEquals(5, result.size());
     Assert.assertEquals(true, result.get(0).getValue() > result.get(1).getValue());
+    Assert.assertEquals("service", result.get(0).getProgramType());
+    Assert.assertEquals("b", result.get(0).getApplication());
   }
 
   @Test
@@ -220,10 +222,10 @@ public class TrackerAppTest extends TestBase {
     // Total count should be equal to the number of events fed to the cube for ds1.
     Assert.assertEquals(5, total);
   }
+
   /* Tests for Preferred Tags
    *
    */
-
   @Test
   public void testAddPreferredTags() throws Exception {
     String response = getServiceResponse(trackerServiceManager, "v1/tags/promote",

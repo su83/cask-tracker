@@ -106,24 +106,26 @@ public class AuditMetricsCube extends AbstractDataset {
     if (auditMessage.getPayload() instanceof AccessPayload) {
       AccessPayload accessPayload = ((AccessPayload) auditMessage.getPayload());
       EntityId accessor = accessPayload.getAccessor();
-      String programName = EntityIdHelper.getEntityName(accessor);
-      String appName = EntityIdHelper.getApplicationName(accessor);
-      String programType = accessor.getEntity().name().toLowerCase();
       // Accounting for cross-namespace dataset access
       if (accessor instanceof NamespacedId) {
         String accessorNamespace = ((NamespacedId) accessor).getNamespace();
         fact.addDimensionValue("accessor_namespace", accessorNamespace);
       }
-      if (appName.length() != 0) {
+      String appName = EntityIdHelper.getApplicationName(accessor);
+      if (!appName.isEmpty()) {
         fact.addDimensionValue("app_name", appName);
       }
-      fact.addDimensionValue("program_name", programName);
-      fact.addDimensionValue("program_type", programType);
-
+      String programName = EntityIdHelper.getEntityName(accessor);
+      if (!programName.isEmpty()) {
+        fact.addDimensionValue("program_name", programName);
+      }
+      String programType = EntityIdHelper.getProgramType(accessor);
+      if (!programType.isEmpty()) {
+        fact.addDimensionValue("program_type", programType);
+      }
       fact.addMeasurement(accessPayload.getAccessType().name().toLowerCase(), MeasureType.COUNTER, 1L);
     }
     fact.addMeasurement("count", MeasureType.COUNTER, 1L);
-
     auditMetrics.add(fact);
   }
 
