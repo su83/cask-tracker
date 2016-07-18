@@ -63,10 +63,9 @@ public final class AuditTagsTable extends AbstractDataset {
     this.preferredTagsTable = preferredTagsTable;
   }
 
-
   public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
-                                    throws IOException, UnauthenticatedException,
-                                           NotFoundException, BadRequestException {
+    throws IOException, UnauthenticatedException,
+    NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
     Set<String> userSet = metadataClient.getTags(namespace);
     for (String usertag : userSet) {
@@ -77,14 +76,14 @@ public final class AuditTagsTable extends AbstractDataset {
       }
     }
     TagsResult result = new TagsResult();
-    result.setUser(tagMap.size());
+    result.setUserSize(tagMap.size());
     result.setUserTags(tagMap);
     return result;
   }
 
 
   public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
-                                                    throws IOException, NotFoundException,
+    throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
     Scanner scanner = preferredTagsTable.scan(null, null);
@@ -100,20 +99,43 @@ public final class AuditTagsTable extends AbstractDataset {
       scanner.close();
     }
     TagsResult result = new TagsResult();
-    result.setPreferred(tagMap.size());
+    result.setPreferredSize(tagMap.size());
     result.setPreferredTags(tagMap);
     return result;
   }
 
 
   public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
-                                                  throws IOException, NotFoundException,
+    throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     TagsResult userResult = getUserTags(metadataClient, prefix, namespace);
     TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace);
-    preferredResult.setUser(userResult.getUser());
+    preferredResult.setUserSize(userResult.getUserSize());
     preferredResult.setUserTags(userResult.getUserTags());
     return preferredResult;
+  }
+
+
+
+  public TagsResult getEntityTags(MetadataClientHelper metadataClient, NamespaceId namespace,
+                                  String entityType, String entityName)
+                      throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    Map<String, Integer> pTagMap = new HashMap<>();
+    Map<String, Integer> uTagMap = new HashMap<>();
+    Set<String> userSet = metadataClient.getEntityTags(namespace, entityType, entityName);
+    for (String tag : userSet) {
+      if (preferredTagsTable.get(tag.getBytes()).isEmpty()) {
+        uTagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
+      } else {
+        pTagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
+      }
+    }
+    TagsResult result = new TagsResult();
+    result.setUserSize(uTagMap.size());
+    result.setUserTags(uTagMap);
+    result.setPreferredSize(pTagMap.size());
+    result.setPreferredTags(pTagMap);
+    return result;
   }
 
 

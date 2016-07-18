@@ -30,6 +30,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
@@ -40,6 +41,7 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
 /**
@@ -129,8 +131,8 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   @GET
   public void getTags(HttpServiceRequest request, HttpServiceResponder responder,
                       @QueryParam("type") @DefaultValue("all") String type,
-                      @QueryParam("prefix") @DefaultValue("") String prefix) throws IOException, NotFoundException,
-    UnauthenticatedException, BadRequestException {
+                      @QueryParam("prefix") @DefaultValue("") String prefix)
+        throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
     MetadataClientHelper metadataClient = getMetadataClient(request);
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
@@ -138,8 +140,8 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                                                     prefix, new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("preferred")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getPreferredTags(metadataClient,
-                                                         prefix, new NamespaceId(getContext().getNamespace())));
+                         auditTagsTable.getPreferredTags(metadataClient, prefix,
+                                                         new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("all")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getTags(metadataClient,
@@ -149,17 +151,40 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     }
   }
 
-  private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
-    if (metadataClient == null) {
-      String hostport = request.getHeader("host");
-      if (hostport == null) {
-        return new MetadataClientHelper();
-      }
-      String hostname = hostport.split(":")[0];
-      Integer port = Integer.parseInt(hostport.split(":")[1]);
-      metadataClient = new MetadataClientHelper(hostname, port);
+
+
+  @Path("v1/tags/{type}/{name}")
+  @GET
+  public void getAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
+                    @PathParam("type") String entityType,
+                    @PathParam("name") String entityName)
+                        throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    MetadataClientHelper metadataClient = getMetadataClient(request);
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
+      responder.sendJson(HttpResponseStatus.OK.getCode(),
+                         auditTagsTable.getEntityTags(
+                           metadataClient, new NamespaceId(getContext().getNamespace()), entityType, entityName));
+    } else {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
-    return metadataClient;
+  }
+
+
+  private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
+    if (this.metadataClient == null) {
+      String hostport = request.getHeader("host") != null ?
+        request.getHeader("host") : request.getHeader("Host");
+      if (hostport == null) {
+        this.metadataClient = new MetadataClientHelper();
+      } else {
+        this.metadataClient = new MetadataClientHelper(hostport.split(":")[0],
+                                                  Integer.parseInt(hostport.split(":")[1]));
+      }
+    }
+    return this.metadataClient;
   }
 }
+
+
+
 

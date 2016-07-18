@@ -249,7 +249,7 @@ public class TrackerAppTest extends TestBase {
                                          "v1/tags?type=preferred",
                                          HttpResponseStatus.OK.getCode());
     TagsResult result = GSON.fromJson(response, TagsResult.class);
-    Assert.assertEquals(3, result.getPreferred());
+    Assert.assertEquals(3, result.getPreferredSize());
   }
 
   @Test
@@ -263,7 +263,7 @@ public class TrackerAppTest extends TestBase {
     String response = getServiceResponse(trackerServiceManager, "v1/tags?type=preferred",
                                          HttpResponseStatus.OK.getCode());
     TagsResult result = GSON.fromJson(response, TagsResult.class);
-    Assert.assertEquals(2, result.getPreferred());
+    Assert.assertEquals(2, result.getPreferredSize());
   }
 
   @Test

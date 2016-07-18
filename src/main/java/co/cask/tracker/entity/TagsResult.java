@@ -49,11 +49,11 @@ public final class TagsResult {
     this.userTags = new HashMap<>();
   }
 
-  public void setPreferred(int preferred) {
+  public void setPreferredSize(int preferred) {
     this.preferred = preferred;
   }
 
-  public void setUser(int user) {
+  public void setUserSize(int user) {
     this.user = user;
   }
 
@@ -65,11 +65,11 @@ public final class TagsResult {
     this.userTags = sortByComparator(userTags);
   }
 
-  public int getPreferred() {
+  public int getPreferredSize() {
     return preferred;
   }
 
-  public int getUser() {
+  public int getUserSize() {
     return user;
   }
 

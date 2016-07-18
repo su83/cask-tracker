@@ -60,6 +60,5 @@ public class TrackerApp extends AbstractApplication<TrackerAppConfig> {
     createDataset(AUDIT_TAGS_DATASET_NAME, AuditTagsTable.class);
     addFlow(new AuditLogFlow(getConfig()));
     addService(new TrackerService());
-
   }
 }
