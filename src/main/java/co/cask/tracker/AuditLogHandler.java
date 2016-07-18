@@ -57,7 +57,7 @@ public final class AuditLogHandler extends AbstractHttpServiceHandler {
     auditLogTable = context.getDataset(TrackerApp.AUDIT_LOG_DATASET_NAME);
   }
 
-  @Path("auditlog/{type}/{name}")
+  @Path("v1/auditlog/{type}/{name}")
   @GET
   public void query(HttpServiceRequest request, HttpServiceResponder responder,
                     @PathParam("type") String entityType,

@@ -117,12 +117,12 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testAuditLog() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
-                                         "auditlog/stream/stream1",
+                                         "v1/auditlog/stream/stream1",
                                          HttpResponseStatus.OK.getCode());
     AuditLogResponse result = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertNotEquals(0, result.getTotalResults());
     response = getServiceResponse(trackerServiceManager,
-                                  "auditlog/dataset/ds1",
+                                  "v1/auditlog/dataset/ds1",
                                   HttpResponseStatus.OK.getCode());
     result = GSON.fromJson(response, AuditLogResponse.class);
     Assert.assertNotEquals(0, result.getTotalResults());
@@ -131,7 +131,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testInvalidDatesError() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
-                                         "auditlog/stream/stream1?startTime=1&endTime=0",
+                                         "v1/auditlog/stream/stream1?startTime=1&endTime=0",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.STARTTIME_GREATER_THAN_ENDTIME, response);
   }
@@ -139,7 +139,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testInvalidOffset() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
-                                         "auditlog/stream/stream1?offset=-1",
+                                         "v1/auditlog/stream/stream1?offset=-1",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.OFFSET_INVALID, response);
   }
@@ -147,7 +147,7 @@ public class TrackerAppTest extends TestBase {
   @Test
   public void testInvalidLimit() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
-                                         "auditlog/stream/stream1?limit=-1",
+                                         "v1/auditlog/stream/stream1?limit=-1",
                                          HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals(ParameterCheck.LIMIT_INVALID, response);
   }
