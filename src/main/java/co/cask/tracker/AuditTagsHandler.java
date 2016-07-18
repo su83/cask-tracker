@@ -15,6 +15,7 @@
  */
 package co.cask.tracker;
 
+import co.cask.cdap.api.annotation.Property;
 import co.cask.cdap.api.service.http.AbstractHttpServiceHandler;
 import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
@@ -22,13 +23,21 @@ import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
+import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.tracker.entity.AuditTagsTable;
+import co.cask.tracker.utils.DiscoveryMetadataClient;
 import co.cask.tracker.utils.MetadataClientHelper;
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import org.apache.twill.discovery.ZKDiscoveryService;
+import org.apache.twill.zookeeper.RetryStrategies;
+import org.apache.twill.zookeeper.ZKClientService;
+import org.apache.twill.zookeeper.ZKClientServices;
+import org.apache.twill.zookeeper.ZKClients;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.IOException;
@@ -36,6 +45,7 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -43,6 +53,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+
 
 /**
  * This class handles requests to the Tracker services API
@@ -57,8 +68,16 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
   private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
 
+  @Property
+  private String zookeeperQuorum;
+
   private AuditTagsTable auditTagsTable;
   private MetadataClientHelper metadataClient;
+  private DiscoveryMetadataClient discoveryMetadataClient;
+
+  public  AuditTagsHandler(String zookeeperQuorum) {
+    this.zookeeperQuorum = zookeeperQuorum;
+  }
 
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
@@ -87,7 +106,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), NO_TAGS_RECEIVED, Charsets.UTF_8);
       return;
     }
-    int num = getMetadataClient(request).getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
+    int num = getDiscoveryMetadataClient().getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
     if (num > 0) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), DELETE_TAGS_WITH_ENTITIES, Charsets.UTF_8);
       return;
@@ -133,24 +152,23 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
         throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
-    MetadataClientHelper metadataClient = getMetadataClient(request);
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient();
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getUserTags(metadataClient,
+                         auditTagsTable.getUserTags(discoveryMetadataClient,
                                                     prefix, new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("preferred")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getPreferredTags(metadataClient, prefix,
+                         auditTagsTable.getPreferredTags(discoveryMetadataClient, prefix,
                                                          new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("all")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getTags(metadataClient,
+                         auditTagsTable.getTags(discoveryMetadataClient,
                                                 prefix, new NamespaceId(getContext().getNamespace())));
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
   }
-
 
 
   @Path("v1/tags/{type}/{name}")
@@ -159,11 +177,13 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                     @PathParam("type") String entityType,
                     @PathParam("name") String entityName)
                         throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
-    MetadataClientHelper metadataClient = getMetadataClient(request);
+//    MetadataClientHelper metadataClient = getMetadataClient(request);
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient();
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getEntityTags(
-                           metadataClient, new NamespaceId(getContext().getNamespace()), entityType, entityName));
+                           discoveryMetadataClient, new NamespaceId(getContext().getNamespace()),
+                                                      entityType, entityName));
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
@@ -182,6 +202,32 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       }
     }
     return this.metadataClient;
+  }
+
+
+
+  private ZKClientService createZKClient(String zookeeperQuorum) {
+    Preconditions.checkNotNull(zookeeperQuorum, "Missing ZooKeeper configuration '%s'", Constants.Zookeeper.QUORUM);
+
+    return ZKClientServices.delegate(
+      ZKClients.reWatchOnExpire(
+        ZKClients.retryOnFailure(
+          ZKClientService.Builder.of(zookeeperQuorum)
+            .build(),
+          RetryStrategies.exponentialDelay(500, 2000, TimeUnit.MILLISECONDS)
+        )
+      )
+    );
+  }
+
+  private DiscoveryMetadataClient getDiscoveryMetadataClient() {
+    if (this.discoveryMetadataClient == null) {
+      ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
+      zkClient.startAndWait();
+      ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
+      this.discoveryMetadataClient = new DiscoveryMetadataClient(zkDiscoveryService);
+    }
+    return  this.discoveryMetadataClient;
   }
 }
 
