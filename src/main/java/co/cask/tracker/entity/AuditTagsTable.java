@@ -29,7 +29,6 @@ import co.cask.cdap.common.UnauthenticatedException;
 
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
-import co.cask.tracker.utils.MetadataClientHelper;
 import com.google.common.base.CharMatcher;
 
 import java.io.IOException;

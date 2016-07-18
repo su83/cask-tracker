@@ -28,7 +28,6 @@ import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.tracker.entity.AuditTagsTable;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
-import co.cask.tracker.utils.MetadataClientHelper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -72,7 +71,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private String zookeeperQuorum;
 
   private AuditTagsTable auditTagsTable;
-  private MetadataClientHelper metadataClient;
   private DiscoveryMetadataClient discoveryMetadataClient;
 
   public  AuditTagsHandler(String zookeeperQuorum) {
@@ -177,7 +175,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                     @PathParam("type") String entityType,
                     @PathParam("name") String entityName)
                         throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
-//    MetadataClientHelper metadataClient = getMetadataClient(request);
     DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient();
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
@@ -189,20 +186,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     }
   }
 
-
-  private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
-    if (this.metadataClient == null) {
-      String hostport = request.getHeader("host") != null ?
-        request.getHeader("host") : request.getHeader("Host");
-      if (hostport == null) {
-        this.metadataClient = new MetadataClientHelper();
-      } else {
-        this.metadataClient = new MetadataClientHelper(hostport.split(":")[0],
-                                                  Integer.parseInt(hostport.split(":")[1]));
-      }
-    }
-    return this.metadataClient;
-  }
 
 
 
