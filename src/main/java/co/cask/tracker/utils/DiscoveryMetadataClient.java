@@ -16,6 +16,8 @@
 
 package co.cask.tracker.utils;
 
+import co.cask.cdap.client.config.ClientConfig;
+import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.ServiceUnavailableException;
@@ -52,8 +54,12 @@ import java.util.concurrent.TimeUnit;
  * Extends AbstractMetadataClient, interact with CDAP (security)
  */
 public class DiscoveryMetadataClient extends AbstractMetaDataClient {
-  private final Supplier<EndpointStrategy> endpointStrategySupplier;
+  private static Supplier<EndpointStrategy> endpointStrategySupplier;
+  private static ClientConfig clientConfig;
+  private static final int STANDLONE =0;
+  private static final int REMOTE = 1;
   private static final Logger LOG = LoggerFactory.getLogger(DiscoveryMetadataClient.class);
+  private static int mode;
 
   @Inject
   public DiscoveryMetadataClient(final DiscoveryServiceClient discoveryClient) {
@@ -63,12 +69,23 @@ public class DiscoveryMetadataClient extends AbstractMetaDataClient {
         return new RandomEndpointStrategy(discoveryClient.discover(Constants.Service.METADATA_SERVICE));
       }
     });
+    this.mode = REMOTE;
   }
 
+  public DiscoveryMetadataClient(ClientConfig clientConfig) {
+    this.clientConfig = clientConfig;
+    this.mode = STANDLONE;
+  }
 
   @Override
   protected HttpResponse execute(HttpRequest request,  int... allowedErrorCodes) throws IOException {
-    HttpResponse response = HttpRequests.execute(request);
+    HttpResponse response;
+    if (mode == REMOTE) {
+      response = HttpRequests.execute(request);
+    }
+    else {
+      response = new RESTClient(clientConfig).execute()
+    }
     return response;
   }
 

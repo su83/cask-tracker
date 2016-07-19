@@ -20,6 +20,8 @@ import co.cask.cdap.api.service.http.AbstractHttpServiceHandler;
 import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
+import co.cask.cdap.client.MetaClient;
+import co.cask.cdap.client.config.ClientConfig;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
@@ -31,6 +33,7 @@ import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.net.InetAddresses;
 import com.google.gson.Gson;
 import org.apache.twill.discovery.ZKDiscoveryService;
 import org.apache.twill.zookeeper.RetryStrategies;
@@ -38,12 +41,15 @@ import org.apache.twill.zookeeper.ZKClientService;
 import org.apache.twill.zookeeper.ZKClientServices;
 import org.apache.twill.zookeeper.ZKClients;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -67,6 +73,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
   private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
 
+  private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
   @Property
   private String zookeeperQuorum;
 
@@ -150,7 +157,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
         throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
-    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient();
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getUserTags(discoveryMetadataClient,
@@ -204,11 +210,22 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   }
 
   private DiscoveryMetadataClient getDiscoveryMetadataClient() {
-    if (this.discoveryMetadataClient == null) {
-      ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
-      zkClient.startAndWait();
-      ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
-      this.discoveryMetadataClient = new DiscoveryMetadataClient(zkDiscoveryService);
+    // parse the Host/host header. make a ping request. if its 200, then use that host/port.
+    // otherwise do whats below:
+    try {
+
+//      new MetaClient(ClientConfig.getDefault()).ping();
+      new MetaClient().ping();
+      // create it based upon ClientConfig if you don't get an exception
+    } catch (IOException|UnauthenticatedException e) {
+      LOG.error("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
+      if (this.discoveryMetadataClient == null) {
+        LOG.info("HEADER TEST handler: " + zookeeperQuorum);
+        ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
+        zkClient.startAndWait();
+        ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
+        this.discoveryMetadataClient = new DiscoveryMetadataClient(zkDiscoveryService);
+      }
     }
     return  this.discoveryMetadataClient;
   }
