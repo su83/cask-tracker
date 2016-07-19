@@ -21,25 +21,20 @@ import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.client.MetaClient;
-import co.cask.cdap.client.MetadataClient;
 import co.cask.cdap.client.config.ClientConfig;
 import co.cask.cdap.client.config.ConnectionConfig;
-import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
 import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
-import co.cask.common.http.HttpMethod;
-import co.cask.common.http.HttpResponse;
 import co.cask.tracker.entity.AuditTagsTable;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.net.InetAddresses;
 import com.google.gson.Gson;
 import org.apache.twill.discovery.ZKDiscoveryService;
 import org.apache.twill.zookeeper.RetryStrategies;
@@ -78,6 +73,9 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
   private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
+
+  private static final int BASEDELAY = 500;
+  private static final int MAXDELAY = 2000;
 
   private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
   @Property
@@ -210,7 +208,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
         ZKClients.retryOnFailure(
           ZKClientService.Builder.of(zookeeperQuorum)
             .build(),
-          RetryStrategies.exponentialDelay(500, 2000, TimeUnit.MILLISECONDS)
+          RetryStrategies.exponentialDelay(BASEDELAY, MAXDELAY, TimeUnit.MILLISECONDS)
         )
       )
     );
@@ -250,6 +248,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       // Note that in standalone CDAP, can't use zookeeper discovery
       LOG.error("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
       LOG.info("Using discovery with zookeeper quorum {}", zookeeperQuorum);
+      //delete "kafca" to make "/cdap/kafka" to "/cdap"
       ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
       zkClient.startAndWait();
       ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);

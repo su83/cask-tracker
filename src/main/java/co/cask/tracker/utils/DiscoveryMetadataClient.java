@@ -37,11 +37,8 @@ import co.cask.common.http.HttpResponse;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
 import org.apache.twill.discovery.Discoverable;
 import org.apache.twill.discovery.DiscoveryServiceClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -55,7 +52,6 @@ import java.util.concurrent.TimeUnit;
  * Extends AbstractMetadataClient, interact with CDAP (security)
  */
 public class DiscoveryMetadataClient extends AbstractMetaDataClient {
-  private static final Logger LOG = LoggerFactory.getLogger(DiscoveryMetadataClient.class);
   private static final int ROUTER = 0;
   private static final int DISCOVERY = 1;
 
