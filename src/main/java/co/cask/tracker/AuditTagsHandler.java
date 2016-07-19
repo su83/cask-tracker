@@ -21,16 +21,22 @@ import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
 import co.cask.cdap.client.MetaClient;
+import co.cask.cdap.client.MetadataClient;
 import co.cask.cdap.client.config.ClientConfig;
+import co.cask.cdap.client.config.ConnectionConfig;
+import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
 import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
+import co.cask.common.http.HttpMethod;
+import co.cask.common.http.HttpResponse;
 import co.cask.tracker.entity.AuditTagsTable;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.net.InetAddresses;
@@ -111,7 +117,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), NO_TAGS_RECEIVED, Charsets.UTF_8);
       return;
     }
-    int num = getDiscoveryMetadataClient().getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
+    int num = getDiscoveryMetadataClient(request).getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
     if (num > 0) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), DELETE_TAGS_WITH_ENTITIES, Charsets.UTF_8);
       return;
@@ -157,6 +163,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
         throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
+    discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getUserTags(discoveryMetadataClient,
@@ -181,7 +188,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                     @PathParam("type") String entityType,
                     @PathParam("name") String entityName)
                         throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
-    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient();
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getEntityTags(
@@ -209,25 +216,45 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     );
   }
 
-  private DiscoveryMetadataClient getDiscoveryMetadataClient() {
+  private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) {
     // parse the Host/host header. make a ping request. if its 200, then use that host/port.
     // otherwise do whats below:
-    try {
-
-//      new MetaClient(ClientConfig.getDefault()).ping();
-      new MetaClient().ping();
-      // create it based upon ClientConfig if you don't get an exception
-    } catch (IOException|UnauthenticatedException e) {
-      LOG.error("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
-      if (this.discoveryMetadataClient == null) {
-        LOG.info("HEADER TEST handler: " + zookeeperQuorum);
-        ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
-        zkClient.startAndWait();
-        ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
-        this.discoveryMetadataClient = new DiscoveryMetadataClient(zkDiscoveryService);
-      }
+    if (discoveryMetadataClient == null) {
+      this.discoveryMetadataClient = createMetadataClient(request);
     }
     return  this.discoveryMetadataClient;
+  }
+
+  private DiscoveryMetadataClient createMetadataClient(HttpServiceRequest request) {
+    try {
+      String hostport = Objects.firstNonNull(request.getHeader("host"), request.getHeader("Host"));
+      LOG.info("Creating ConnectionConfig using host and port {}", hostport);
+      String hostName = hostport.split(":")[0];
+      int port = Integer.parseInt(hostport.split(":")[1]);
+      ConnectionConfig connectionConfig = ConnectionConfig.builder()
+        .setHostname(hostName)
+        .setPort(port)
+        .build();
+      ClientConfig config = ClientConfig.builder().setConnectionConfig(connectionConfig).build();
+      try {
+        new MetaClient(config).ping();
+      } catch (IOException e) {
+        config = ClientConfig.getDefault();
+        LOG.error("Got error while pinging router. Falling back to default client config: " + config, e);
+      }
+      return new DiscoveryMetadataClient(config);
+
+      // create it based upon ClientConfig if you don't get an exception
+    } catch (UnauthenticatedException e) {
+      // authentication is enabled, so we can't go through router. Have to use discovery via zookeeper
+      // Note that in standalone CDAP, can't use zookeeper discovery
+      LOG.error("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
+      LOG.info("Using discovery with zookeeper quorum {}", zookeeperQuorum);
+      ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
+      zkClient.startAndWait();
+      ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
+      return new DiscoveryMetadataClient(zkDiscoveryService);
+    }
   }
 }
 

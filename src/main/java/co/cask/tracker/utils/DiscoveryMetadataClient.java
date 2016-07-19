@@ -16,6 +16,7 @@
 
 package co.cask.tracker.utils;
 
+import co.cask.cdap.client.MetadataClient;
 import co.cask.cdap.client.config.ClientConfig;
 import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
@@ -54,14 +55,14 @@ import java.util.concurrent.TimeUnit;
  * Extends AbstractMetadataClient, interact with CDAP (security)
  */
 public class DiscoveryMetadataClient extends AbstractMetaDataClient {
-  private static Supplier<EndpointStrategy> endpointStrategySupplier;
-  private static ClientConfig clientConfig;
-  private static final int STANDLONE =0;
-  private static final int REMOTE = 1;
   private static final Logger LOG = LoggerFactory.getLogger(DiscoveryMetadataClient.class);
-  private static int mode;
+  private static final int ROUTER = 0;
+  private static final int DISCOVERY = 1;
 
-  @Inject
+  private final int mode;
+  private Supplier<EndpointStrategy> endpointStrategySupplier;
+  private ClientConfig clientConfig;
+
   public DiscoveryMetadataClient(final DiscoveryServiceClient discoveryClient) {
     this.endpointStrategySupplier = Suppliers.memoize(new Supplier<EndpointStrategy>() {
       @Override
@@ -69,35 +70,37 @@ public class DiscoveryMetadataClient extends AbstractMetaDataClient {
         return new RandomEndpointStrategy(discoveryClient.discover(Constants.Service.METADATA_SERVICE));
       }
     });
-    this.mode = REMOTE;
+    this.mode = DISCOVERY;
   }
 
   public DiscoveryMetadataClient(ClientConfig clientConfig) {
     this.clientConfig = clientConfig;
-    this.mode = STANDLONE;
+    this.mode = ROUTER;
   }
 
   @Override
-  protected HttpResponse execute(HttpRequest request,  int... allowedErrorCodes) throws IOException {
-    HttpResponse response;
-    if (mode == REMOTE) {
-      response = HttpRequests.execute(request);
+  protected HttpResponse execute(HttpRequest request,  int... allowedErrorCodes)
+    throws IOException, UnauthenticatedException {
+    if (mode == DISCOVERY) {
+      return HttpRequests.execute(request);
+    } else {
+      return new RESTClient(clientConfig).execute(request, clientConfig.getAccessToken());
     }
-    else {
-      response = new RESTClient(clientConfig).execute()
-    }
-    return response;
   }
 
   @Override
   protected URL resolve(Id.Namespace namespace, String path) throws MalformedURLException {
-    InetSocketAddress addr = getMetadataServiceAddress();
-    String url = String.format("http://%s:%d%s/%s/%s", addr.getHostName(), addr.getPort(),
-                               Constants.Gateway.API_VERSION_3, String.format("namespaces/%s", namespace.getId()),
-                               path); //Not sure
-    LOG.info("HEADER TEST: " + url);
-    return new URL(url);
+    if (mode == DISCOVERY) {
+      InetSocketAddress addr = getMetadataServiceAddress();
+      String url = String.format("http://%s:%d%s/%s/%s", addr.getHostName(), addr.getPort(),
+                                 Constants.Gateway.API_VERSION_3, String.format("namespaces/%s", namespace.getId()),
+                                 path);
+      return new URL(url);
+    } else {
+      return clientConfig.resolveNamespacedURLV3(namespace, path);
+    }
   }
+
 
   private InetSocketAddress getMetadataServiceAddress() {
     Discoverable discoverable = endpointStrategySupplier.get().pick(3L, TimeUnit.SECONDS);
