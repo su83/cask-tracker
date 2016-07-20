@@ -199,7 +199,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     }
   }
 
-  @Path("v1/tags/promote/{type}/{name}/")
+  @Path("v1/tags/promote/{type}/{name}")
   @POST
   public void addAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
                              @PathParam("type") String entityType,
