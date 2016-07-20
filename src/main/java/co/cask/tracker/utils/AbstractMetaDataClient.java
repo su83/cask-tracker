@@ -180,6 +180,179 @@ public abstract  class AbstractMetaDataClient {
     return makeRequest(namespacedId, path, httpMethod, null);
   }
 
+
+  /**
+   * @param id the entity for which to add metadata tags
+   * @param tags the metadata tags
+   */
+  public void addTags(Id id, Set<String> tags)
+    throws NotFoundException, BadRequestException, UnauthenticatedException, IOException {
+
+    if (id instanceof Id.Application) {
+      addTags((Id.Application) id, tags);
+    } else if (id instanceof Id.Artifact) {
+      addTags((Id.Artifact) id, tags);
+    } else if (id instanceof Id.DatasetInstance) {
+      addTags((Id.DatasetInstance) id, tags);
+    } else if (id instanceof Id.Stream) {
+      addTags((Id.Stream) id, tags);
+    } else if (id instanceof Id.Stream.View) {
+      addTags((Id.Stream.View) id, tags);
+    } else if (id instanceof Id.Program) {
+      addTags((Id.Program) id, tags);
+    } else {
+      throw new IllegalArgumentException("Unsupported Id type: " + id.getClass().getName());
+    }
+  }
+
+
+  /**
+   * Adds tags to an application.
+   *
+   * @param appId app to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.Application appId, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(appId, constructPath(appId), tags);
+  }
+
+  /**
+   * Adds tags to an artifact.
+   *
+   * @param artifactId artifact to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.Artifact artifactId, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(artifactId, constructPath(artifactId), tags);
+  }
+
+  /**
+   * Adds tags to a dataset.
+   *
+   * @param datasetInstance dataset to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.DatasetInstance datasetInstance, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(datasetInstance, constructPath(datasetInstance), tags);
+  }
+
+  /**
+   * Adds tags to a stream.
+   *
+   * @param streamId stream to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.Stream streamId, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(streamId, constructPath(streamId), tags);
+  }
+
+  /**
+   * Adds tags to a view.
+   *
+   * @param viewId view to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.Stream.View viewId, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(viewId, constructPath(viewId), tags);
+  }
+
+  /**
+   * Adds tags to a program.
+   *
+   * @param programId program to add tags to
+   * @param tags tags to be added
+   */
+  public void addTags(Id.Program programId, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    addTags(programId, constructPath(programId), tags);
+  }
+
+  private void addTags(Id.NamespacedId namespacedId, String entityPath, Set<String> tags)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    String path = String.format("%s/metadata/tags", entityPath);
+    makeRequest(namespacedId, path, HttpMethod.POST, GSON.toJson(tags));
+  }
+
+
+  /**
+   * Removes a tag from an application.
+   *
+   * @param appId app to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.Application appId, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(appId, constructPath(appId), tagToRemove);
+  }
+
+  /**
+   * Removes a tag from an artifact.
+   *
+   * @param artifactId artifact to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.Artifact artifactId, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(artifactId, constructPath(artifactId), tagToRemove);
+  }
+
+
+  /**
+   * Removes a tag from a dataset.
+   *
+   * @param datasetInstance dataset to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.DatasetInstance datasetInstance, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(datasetInstance, constructPath(datasetInstance), tagToRemove);
+  }
+
+  /**
+   * Removes a tag from a stream.
+   *
+   * @param streamId stream to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.Stream streamId, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(streamId, constructPath(streamId), tagToRemove);
+  }
+
+  /**
+   * Removes a tag from a view.
+   *
+   * @param viewId view to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.Stream.View viewId, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(viewId, constructPath(viewId), tagToRemove);
+  }
+
+  /**
+   * Removes a tag from a program.
+   *
+   * @param programId program to remove tag from
+   * @param tagToRemove tag to be removed
+   */
+  public void removeTag(Id.Program programId, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    removeTag(programId, constructPath(programId), tagToRemove);
+  }
+
+  private void removeTag(Id.NamespacedId namespacedId, String entityPath, String tagToRemove)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    String path = String.format("%s/metadata/tags/%s", entityPath, tagToRemove);
+    makeRequest(namespacedId, path, HttpMethod.DELETE);
+  }
+
+
   // makes a request and throws BadRequestException or NotFoundException, as appropriate
   private HttpResponse makeRequest(Id.NamespacedId namespacedId, String path,
                                    HttpMethod httpMethod, @Nullable String body)
@@ -226,4 +399,6 @@ public abstract  class AbstractMetaDataClient {
   private String constructPath(Id.Stream.View viewId) {
     return String.format("streams/%s/views/%s", viewId.getStreamId(), viewId.getId());
   }
+
+
 }

@@ -27,7 +27,9 @@ import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.common.discovery.EndpointStrategy;
 import co.cask.cdap.common.discovery.RandomEndpointStrategy;
 import co.cask.cdap.proto.Id;
+import co.cask.cdap.proto.id.DatasetId;
 import co.cask.cdap.proto.id.NamespaceId;
+import co.cask.cdap.proto.id.StreamId;
 import co.cask.cdap.proto.metadata.MetadataScope;
 import co.cask.cdap.proto.metadata.MetadataSearchResultRecord;
 import co.cask.cdap.proto.metadata.MetadataSearchTargetType;
@@ -45,6 +47,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -146,5 +149,27 @@ public class DiscoveryMetadataClient extends AbstractMetaDataClient {
       tagSet.addAll(set);
     }
     return tagSet;
+  }
+
+  public void addTags(NamespaceId namespace, String entityType, String entityName, List<String> tagList)
+                          throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    if (entityType.toLowerCase().equals("dataset")) {
+      DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
+      addTags(datasetId.toId(), new HashSet<String>(tagList));
+    } else {
+      StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
+      addTags(streamId.toId(), new HashSet<String>(tagList));
+    }
+  }
+
+  public void deleteTag(NamespaceId namespace, String entityType, String entityName, String tagName)
+            throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    if (entityType.toLowerCase().equals("dataset")) {
+      DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
+      removeTag(datasetId.toId(), tagName);
+    } else {
+      StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
+      removeTag(streamId.toId(), tagName);
+    }
   }
 }

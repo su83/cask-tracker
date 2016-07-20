@@ -51,6 +51,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -73,6 +74,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
   private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
+  private static final String USER_TAG_NOTFOUND = "User tag not found";
 
   private static final int BASEDELAY = 500;
   private static final int MAXDELAY = 2000;
@@ -196,6 +198,53 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
   }
+
+  @Path("v1/tags/promote/{type}/{name}/")
+  @POST
+  public void addAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
+                             @PathParam("type") String entityType,
+                             @PathParam("name") String entityName)
+                throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
+    ByteBuffer requestContents = request.getContent();
+    if (requestContents == null) {
+      responder.sendError(HttpResponseStatus.BAD_REQUEST.getCode(), NO_TAGS_RECEIVED);
+      return;
+    }
+    String tags = StandardCharsets.UTF_8.decode(requestContents).toString();
+    List<String> tagsList = GSON.fromJson(tags, STRING_LIST);
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
+      discoveryMetadataClient.addTags(new NamespaceId(getContext().getNamespace()), entityType, entityName, tagsList);
+      responder.sendStatus(HttpResponseStatus.OK.getCode());
+    } else {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+    }
+  }
+
+  @Path("v1/tags/delete/{type}/{name}")
+  @DELETE
+  public void deleteAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
+                              @PathParam("type") String entityType,
+                              @PathParam("name") String entityName,
+                              @QueryParam("tagname") String tagName)
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
+      Set<String> set = discoveryMetadataClient.getEntityTags(
+        new NamespaceId(getContext().getNamespace()), entityType, entityName);
+      if (set.contains(tagName)) {
+        discoveryMetadataClient.deleteTag(new NamespaceId(getContext().getNamespace()),
+                                          entityType, entityName, tagName);
+        responder.sendStatus(HttpResponseStatus.OK.getCode());
+      } else {
+        responder.sendJson(HttpResponseStatus.NOT_FOUND.getCode(), USER_TAG_NOTFOUND);
+      }
+
+    } else {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+    }
+  }
+
 
 
 
