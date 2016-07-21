@@ -16,7 +16,6 @@
 
 package co.cask.tracker.utils;
 
-import co.cask.cdap.client.MetadataClient;
 import co.cask.cdap.client.config.ClientConfig;
 import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
@@ -26,6 +25,7 @@ import co.cask.cdap.common.UnauthenticatedException;
 import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.common.discovery.EndpointStrategy;
 import co.cask.cdap.common.discovery.RandomEndpointStrategy;
+import co.cask.cdap.common.metadata.AbstractMetadataClient;
 import co.cask.cdap.proto.Id;
 import co.cask.cdap.proto.id.DatasetId;
 import co.cask.cdap.proto.id.NamespaceId;
@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Extends AbstractMetadataClient, interact with CDAP (security)
  */
-public class DiscoveryMetadataClient extends AbstractMetaDataClient {
+public class DiscoveryMetadataClient extends AbstractMetadataClient {
   private static final int ROUTER = 0;
   private static final int DISCOVERY = 1;
 
