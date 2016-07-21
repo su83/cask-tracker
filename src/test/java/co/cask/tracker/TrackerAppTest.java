@@ -223,6 +223,22 @@ public class TrackerAppTest extends TestBase {
     Assert.assertEquals(5, total);
   }
 
+  @Test
+  public void testResolutionBucket() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset" +
+                                           "&entityName=ds1&startTime=now-6d&endTime=now",
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Assert.assertEquals(result.getBucketInterval(), "HOUR");
+    response = getServiceResponse(trackerServiceManager,
+                                  "v1/auditmetrics/audit-histogram?entityType=dataset&entityName=ds1" +
+                                    "&startTime=now-8d&endTime=now",
+                                  HttpResponseStatus.OK.getCode());
+    result = GSON.fromJson(response, AuditHistogramResult.class);
+    Assert.assertEquals(result.getBucketInterval(), "DAY");
+  }
+
   /* Tests for Preferred Tags
    *
    */
