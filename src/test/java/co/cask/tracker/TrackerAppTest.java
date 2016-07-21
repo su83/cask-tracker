@@ -88,6 +88,7 @@ public class TrackerAppTest extends TestBase {
   private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTabcdefghijklmnopqrst123/*!";
   private static final int TEST_STRING_LIST_LENGTH = 3000;
   private static final int STRING_LENGTH = 60;
+  private static final int SEED = 0;
 
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
@@ -339,7 +340,7 @@ public class TrackerAppTest extends TestBase {
   }
 
   private List<String> generateStringList(int maxStringLength, String characters, int stringNum) {
-    Random rng = new Random();
+    Random rng = new Random(SEED);
     List<String> list = new ArrayList<>();
     for (int i = 0; i < stringNum; i++) {
       list.add(generateString(rng, characters, maxStringLength));
