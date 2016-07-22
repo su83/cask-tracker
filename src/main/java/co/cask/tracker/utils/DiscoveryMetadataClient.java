@@ -134,13 +134,21 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
 
   public Set<String> getEntityTags(NamespaceId namespace, String entityType, String entityName)
                     throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    MetadataSearchTargetType searchTargetType;
     if (entityType.toLowerCase().equals("dataset")) {
-      DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
-      return getTags(datasetId.toId(),  MetadataScope.USER);
+      searchTargetType = MetadataSearchTargetType.DATASET;
     } else {
-      StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
-      return getTags(streamId.toId(), MetadataScope.USER);
+      searchTargetType = MetadataSearchTargetType.STREAM;
     }
+    Set<MetadataSearchResultRecord> metadataSet =
+      searchMetadata(namespace.toId(), entityName,
+                         ImmutableSet.<MetadataSearchTargetType>of(searchTargetType));
+    Set<String> tagSet = new HashSet<>();
+    for (MetadataSearchResultRecord mdsr: metadataSet) {
+      Set<String> set = getTags(mdsr.getEntityId(), MetadataScope.USER);
+      tagSet.addAll(set);
+    }
+    return tagSet;
   }
 
   public void addTags(NamespaceId namespace, String entityType, String entityName, List<String> tagList)
