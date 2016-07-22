@@ -171,6 +171,8 @@ public class TrackerAppTest extends TestBase {
     List<TopProgramsResult> result = GSON.fromJson(response, PROGRAM_LIST);
     Assert.assertEquals(5, result.size());
     Assert.assertEquals(true, result.get(0).getValue() > result.get(1).getValue());
+    Assert.assertEquals("service", result.get(0).getProgramType());
+    Assert.assertEquals("b", result.get(0).getApplication());
   }
 
   @Test
