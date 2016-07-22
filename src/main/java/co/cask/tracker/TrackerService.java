@@ -16,12 +16,22 @@
 package co.cask.tracker;
 
 import co.cask.cdap.api.service.AbstractService;
+import co.cask.tracker.config.TrackerAppConfig;
 
 /**
  * A service for accessing the Tracker endpoints through a RESTful API.
  */
 public class TrackerService extends AbstractService {
   public static final String SERVICE_NAME = "TrackerService";
+  private String zookeeperString;
+
+  public TrackerService(TrackerAppConfig trackerAppConfig) {
+    this.zookeeperString = trackerAppConfig.getAuditLogKafkaConfig().getZookeeperString();
+  }
+
+  public TrackerService() {
+    this.zookeeperString = null;
+  }
 
   @Override
   protected void configure() {
@@ -30,6 +40,6 @@ public class TrackerService extends AbstractService {
     addHandler(new AuditLogHandler());
     addHandler(new AuditMetricsHandler());
     addHandler(new TrackerMeterHandler());
-    addHandler(new AuditTagsHandler());
+    addHandler(new AuditTagsHandler(zookeeperString));
   }
 }

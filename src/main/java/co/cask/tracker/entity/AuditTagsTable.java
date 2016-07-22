@@ -28,7 +28,7 @@ import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
 
 import co.cask.cdap.proto.id.NamespaceId;
-import co.cask.tracker.utils.MetadataClientHelper;
+import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.CharMatcher;
 
 import java.io.IOException;
@@ -63,15 +63,15 @@ public final class AuditTagsTable extends AbstractDataset {
     this.preferredTagsTable = preferredTagsTable;
   }
 
-  public TagsResult getUserTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getUserTags(DiscoveryMetadataClient discoveryMetadataClient, String prefix, NamespaceId namespace)
     throws IOException, UnauthenticatedException,
     NotFoundException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getTags(namespace);
+    Set<String> userSet = discoveryMetadataClient.getTags(namespace);
     for (String usertag : userSet) {
       if (preferredTagsTable.get(usertag.getBytes()).isEmpty()) {
         if (usertag.toLowerCase().startsWith(prefix.toLowerCase())) {
-          tagMap.put(usertag, metadataClient.getEntityNum(usertag, namespace));
+          tagMap.put(usertag, discoveryMetadataClient.getEntityNum(usertag, namespace));
         }
       }
     }
@@ -82,7 +82,8 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getPreferredTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getPreferredTags(DiscoveryMetadataClient discoveryMetadataClient,
+                                     String prefix, NamespaceId namespace)
     throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
     Map<String, Integer> tagMap = new HashMap<>();
@@ -92,7 +93,7 @@ public final class AuditTagsTable extends AbstractDataset {
       while ((row = scanner.next()) != null) {
         String tag = Bytes.toString(row.getRow());
         if (tag.toLowerCase().startsWith(prefix.toLowerCase())) {
-          tagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
+          tagMap.put(tag, discoveryMetadataClient.getEntityNum(tag, namespace));
         }
       }
     } finally {
@@ -105,11 +106,11 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getTags(MetadataClientHelper metadataClient, String prefix, NamespaceId namespace)
+  public TagsResult getTags(DiscoveryMetadataClient discoveryMetadataClient, String prefix, NamespaceId namespace)
     throws IOException, NotFoundException,
     UnauthenticatedException, BadRequestException {
-    TagsResult userResult = getUserTags(metadataClient, prefix, namespace);
-    TagsResult preferredResult = getPreferredTags(metadataClient, prefix, namespace);
+    TagsResult userResult = getUserTags(discoveryMetadataClient, prefix, namespace);
+    TagsResult preferredResult = getPreferredTags(discoveryMetadataClient, prefix, namespace);
     preferredResult.setUserSize(userResult.getUserSize());
     preferredResult.setUserTags(userResult.getUserTags());
     return preferredResult;
@@ -117,17 +118,17 @@ public final class AuditTagsTable extends AbstractDataset {
 
 
 
-  public TagsResult getEntityTags(MetadataClientHelper metadataClient, NamespaceId namespace,
+  public TagsResult getEntityTags(DiscoveryMetadataClient discoveryMetadataClient, NamespaceId namespace,
                                   String entityType, String entityName)
                       throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
     Map<String, Integer> pTagMap = new HashMap<>();
     Map<String, Integer> uTagMap = new HashMap<>();
-    Set<String> userSet = metadataClient.getEntityTags(namespace, entityType, entityName);
+    Set<String> userSet = discoveryMetadataClient.getEntityTags(namespace, entityType, entityName);
     for (String tag : userSet) {
       if (preferredTagsTable.get(tag.getBytes()).isEmpty()) {
-        uTagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
+        uTagMap.put(tag, discoveryMetadataClient.getEntityNum(tag, namespace));
       } else {
-        pTagMap.put(tag, metadataClient.getEntityNum(tag, namespace));
+        pTagMap.put(tag, discoveryMetadataClient.getEntityNum(tag, namespace));
       }
     }
     TagsResult result = new TagsResult();
@@ -168,8 +169,7 @@ public final class AuditTagsTable extends AbstractDataset {
     List<String> valid = new LinkedList<>();
     List<String> invalid = new LinkedList<>();
     for (String tag : tagList) {
-      Row row = preferredTagsTable.get(tag.getBytes());
-      if (row.isEmpty() && isValid(tag)) {
+      if (isValid(tag)) {
         valid.add(tag);
         preferredTagsTable.put(tag.getBytes(), TOTAL_ENTITIES, DEFAULT_TOTAL_ENTITIES);
       } else {

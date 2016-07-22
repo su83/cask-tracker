@@ -15,27 +15,44 @@
  */
 package co.cask.tracker;
 
+import co.cask.cdap.api.annotation.Property;
 import co.cask.cdap.api.service.http.AbstractHttpServiceHandler;
 import co.cask.cdap.api.service.http.HttpServiceContext;
 import co.cask.cdap.api.service.http.HttpServiceRequest;
 import co.cask.cdap.api.service.http.HttpServiceResponder;
+import co.cask.cdap.client.MetaClient;
+import co.cask.cdap.client.config.ClientConfig;
+import co.cask.cdap.client.config.ConnectionConfig;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
+import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
 import co.cask.tracker.entity.AuditTagsTable;
-import co.cask.tracker.utils.MetadataClientHelper;
+import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import org.apache.twill.discovery.ZKDiscoveryService;
+import org.apache.twill.zookeeper.RetryStrategies;
+import org.apache.twill.zookeeper.ZKClientService;
+import org.apache.twill.zookeeper.ZKClientServices;
+import org.apache.twill.zookeeper.ZKClients;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -43,6 +60,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+
 
 /**
  * This class handles requests to the Tracker services API
@@ -56,9 +74,21 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final String INVALID_TYPE_PARAMETER = "Invalid parameter for 'type' query";
   private static final String DELETE_TAGS_WITH_ENTITIES = "Not able to delete preferred tags with entities";
   private static final String PREFERRED_TAG_NOTFOUND = "Preferred tag not found";
+  private static final String USER_TAG_NOTFOUND = "User tag not found";
+
+  private static final int BASEDELAY = 500;
+  private static final int MAXDELAY = 2000;
+
+  private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
+  @Property
+  private String zookeeperQuorum;
 
   private AuditTagsTable auditTagsTable;
-  private MetadataClientHelper metadataClient;
+  private DiscoveryMetadataClient discoveryMetadataClient;
+
+  public  AuditTagsHandler(String zookeeperQuorum) {
+    this.zookeeperQuorum = zookeeperQuorum;
+  }
 
   @Override
   public void initialize(HttpServiceContext context) throws Exception {
@@ -87,7 +117,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), NO_TAGS_RECEIVED, Charsets.UTF_8);
       return;
     }
-    int num = getMetadataClient(request).getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
+    int num = getDiscoveryMetadataClient(request).getEntityNum(tag, new NamespaceId(getContext().getNamespace()));
     if (num > 0) {
       responder.sendString(HttpResponseStatus.BAD_REQUEST.getCode(), DELETE_TAGS_WITH_ENTITIES, Charsets.UTF_8);
       return;
@@ -133,24 +163,23 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
         throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
-    MetadataClientHelper metadataClient = getMetadataClient(request);
+    discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (type.equals("user")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getUserTags(metadataClient,
+                         auditTagsTable.getUserTags(discoveryMetadataClient,
                                                     prefix, new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("preferred")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getPreferredTags(metadataClient, prefix,
+                         auditTagsTable.getPreferredTags(discoveryMetadataClient, prefix,
                                                          new NamespaceId(getContext().getNamespace())));
     } else if (type.equals("all")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getTags(metadataClient,
+                         auditTagsTable.getTags(discoveryMetadataClient,
                                                 prefix, new NamespaceId(getContext().getNamespace())));
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
   }
-
 
 
   @Path("v1/tags/{type}/{name}")
@@ -159,29 +188,124 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                     @PathParam("type") String entityType,
                     @PathParam("name") String entityName)
                         throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
-    MetadataClientHelper metadataClient = getMetadataClient(request);
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
                          auditTagsTable.getEntityTags(
-                           metadataClient, new NamespaceId(getContext().getNamespace()), entityType, entityName));
+                           discoveryMetadataClient, new NamespaceId(getContext().getNamespace()),
+                                                      entityType, entityName));
+    } else {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+    }
+  }
+
+  @Path("v1/tags/promote/{type}/{name}")
+  @POST
+  public void addAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
+                             @PathParam("type") String entityType,
+                             @PathParam("name") String entityName)
+                throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
+    ByteBuffer requestContents = request.getContent();
+    if (requestContents == null) {
+      responder.sendError(HttpResponseStatus.BAD_REQUEST.getCode(), NO_TAGS_RECEIVED);
+      return;
+    }
+    String tags = StandardCharsets.UTF_8.decode(requestContents).toString();
+    List<String> tagsList = GSON.fromJson(tags, STRING_LIST);
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
+      discoveryMetadataClient.addTags(new NamespaceId(getContext().getNamespace()), entityType, entityName, tagsList);
+      responder.sendStatus(HttpResponseStatus.OK.getCode());
+    } else {
+      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+    }
+  }
+
+  @Path("v1/tags/delete/{type}/{name}")
+  @DELETE
+  public void deleteAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
+                              @PathParam("type") String entityType,
+                              @PathParam("name") String entityName,
+                              @QueryParam("tagname") String tagName)
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
+    if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
+      Set<String> set = discoveryMetadataClient.getEntityTags(
+        new NamespaceId(getContext().getNamespace()), entityType, entityName);
+      if (set.contains(tagName)) {
+        if (discoveryMetadataClient.deleteTag(new NamespaceId(getContext().getNamespace()),
+                                          entityType, entityName, tagName)) {
+          responder.sendStatus(HttpResponseStatus.OK.getCode());
+        } else {
+          responder.sendStatus(HttpResponseStatus.BAD_REQUEST.getCode());
+        }
+      } else {
+        responder.sendJson(HttpResponseStatus.NOT_FOUND.getCode(), USER_TAG_NOTFOUND);
+      }
+
     } else {
       responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
     }
   }
 
 
-  private MetadataClientHelper getMetadataClient(HttpServiceRequest request) {
-    if (this.metadataClient == null) {
-      String hostport = request.getHeader("host") != null ?
-        request.getHeader("host") : request.getHeader("Host");
-      if (hostport == null) {
-        this.metadataClient = new MetadataClientHelper();
-      } else {
-        this.metadataClient = new MetadataClientHelper(hostport.split(":")[0],
-                                                  Integer.parseInt(hostport.split(":")[1]));
-      }
+
+
+
+  private ZKClientService createZKClient(String zookeeperQuorum) {
+    Preconditions.checkNotNull(zookeeperQuorum, "Missing ZooKeeper configuration '%s'", Constants.Zookeeper.QUORUM);
+
+    return ZKClientServices.delegate(
+      ZKClients.reWatchOnExpire(
+        ZKClients.retryOnFailure(
+          ZKClientService.Builder.of(zookeeperQuorum)
+            .build(),
+          RetryStrategies.exponentialDelay(BASEDELAY, MAXDELAY, TimeUnit.MILLISECONDS)
+        )
+      )
+    );
+  }
+
+  private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) {
+    // parse the Host/host header. make a ping request. if its 200, then use that host/port.
+    // otherwise do whats below:
+    if (discoveryMetadataClient == null) {
+      this.discoveryMetadataClient = createMetadataClient(request);
     }
-    return this.metadataClient;
+    return  this.discoveryMetadataClient;
+  }
+
+  private DiscoveryMetadataClient createMetadataClient(HttpServiceRequest request) {
+    try {
+      String hostport = Objects.firstNonNull(request.getHeader("host"), request.getHeader("Host"));
+      LOG.info("Creating ConnectionConfig using host and port {}", hostport);
+      String hostName = hostport.split(":")[0];
+      int port = Integer.parseInt(hostport.split(":")[1]);
+      ConnectionConfig connectionConfig = ConnectionConfig.builder()
+        .setHostname(hostName)
+        .setPort(port)
+        .build();
+      ClientConfig config = ClientConfig.builder().setConnectionConfig(connectionConfig).build();
+      try {
+        new MetaClient(config).ping();
+      } catch (IOException e) {
+        config = ClientConfig.getDefault();
+        LOG.error("Got error while pinging router. Falling back to default client config: " + config, e);
+      }
+      return new DiscoveryMetadataClient(config);
+
+      // create it based upon ClientConfig if you don't get an exception
+    } catch (UnauthenticatedException e) {
+      // authentication is enabled, so we can't go through router. Have to use discovery via zookeeper
+      // Note that in standalone CDAP, can't use zookeeper discovery
+      LOG.error("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
+      LOG.info("Using discovery with zookeeper quorum {}", zookeeperQuorum);
+      //delete "kafca" to make "/cdap/kafka" to "/cdap"
+      ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
+      zkClient.startAndWait();
+      ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
+      return new DiscoveryMetadataClient(zkDiscoveryService);
+    }
   }
 }
 

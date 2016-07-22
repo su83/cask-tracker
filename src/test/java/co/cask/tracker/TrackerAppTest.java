@@ -65,6 +65,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -84,6 +85,10 @@ public class TrackerAppTest extends TestBase {
   private static final Type TIMESINCE_MAP = new TypeToken<Map<String, Long>>() { }.getRawType();
 
   private static final String TEST_JSON_TAGS = "[\"tag1\",\"tag2\",\"tag3\",\"ta*4\"]";
+  private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTabcdefghijklmnopqrst123/*!";
+  private static final int TEST_STRING_LIST_LENGTH = 3000;
+  private static final int STRING_LENGTH = 60;
+  private static final int SEED = 0;
 
   @ClassRule
   public static final TestConfiguration CONFIG = new TestConfiguration("explore.enabled", false);
@@ -244,8 +249,11 @@ public class TrackerAppTest extends TestBase {
    */
   @Test
   public void testAddPreferredTags() throws Exception {
+    List<String> testList = generateStringList(STRING_LENGTH, CHARACTERS, TEST_STRING_LIST_LENGTH);
     String response = getServiceResponse(trackerServiceManager, "v1/tags/promote",
-                                         "POST", TEST_JSON_TAGS, HttpResponseStatus.OK.getCode());
+                                         "POST", GSON.toJson(testList), HttpResponseStatus.OK.getCode());
+    ValidateTagsResult result = GSON.fromJson(response, ValidateTagsResult.class);
+    Assert.assertEquals(TEST_STRING_LIST_LENGTH, result.getInvalid() + result.getValid());
   }
 
   @Test
@@ -348,6 +356,26 @@ public class TrackerAppTest extends TestBase {
                                          expectedResponse);
     return GSON.fromJson(response, TrackerMeterResult.class);
   }
+
+  private List<String> generateStringList(int maxStringLength, String characters, int stringNum) {
+    Random rng = new Random(SEED);
+    List<String> list = new ArrayList<>();
+    for (int i = 0; i < stringNum; i++) {
+      list.add(generateString(rng, characters, maxStringLength));
+    }
+    return list;
+  }
+
+  private String generateString (Random rng, String characters, int maxLength) {
+    int length = rng.nextInt(maxLength);
+    char[] text = new char[length];
+    for (int i = 0; i < length; i++) {
+      text[i] = characters.charAt(rng.nextInt(characters.length()));
+    }
+    return new String(text);
+  }
+
+
 
   // Request is GET by default
   private String getServiceResponse(ServiceManager serviceManager,
