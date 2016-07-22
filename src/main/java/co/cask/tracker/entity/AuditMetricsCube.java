@@ -111,7 +111,7 @@ public class AuditMetricsCube extends AbstractDataset {
         String accessorNamespace = ((NamespacedId) accessor).getNamespace();
         fact.addDimensionValue("accessor_namespace", accessorNamespace);
       }
-      String appName = EntityIdHelper.getApplicationName(accessor);
+      String appName = EntityIdHelper.getParentApplicationName(accessor);
       if (!appName.isEmpty()) {
         fact.addDimensionValue("app_name", appName);
       }

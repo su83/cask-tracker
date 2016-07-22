@@ -98,7 +98,7 @@ public class EntityIdHelper {
   /*
    * Get the parent application name of an entity if it has one
    */
-  public static String getApplicationName(EntityId entityId) throws IOException {
+  public static String getParentApplicationName(EntityId entityId) throws IOException {
     EntityType entityType = entityId.getEntity();
     String name;
     switch (entityType) {
