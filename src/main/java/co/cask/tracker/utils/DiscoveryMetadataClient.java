@@ -162,14 +162,18 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
     }
   }
 
-  public void deleteTag(NamespaceId namespace, String entityType, String entityName, String tagName)
-            throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
-    if (entityType.toLowerCase().equals("dataset")) {
-      DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
-      removeTag(datasetId.toId(), tagName);
-    } else {
-      StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
-      removeTag(streamId.toId(), tagName);
+  public boolean deleteTag(NamespaceId namespace, String entityType, String entityName, String tagName) {
+    try {
+      if (entityType.toLowerCase().equals("dataset")) {
+        DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
+        removeTag(datasetId.toId(), tagName);
+      } else {
+        StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
+        removeTag(streamId.toId(), tagName);
+      }
+      return true;
+    } catch (Exception e) {
+      return false;
     }
   }
 }

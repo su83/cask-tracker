@@ -233,9 +233,12 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
       Set<String> set = discoveryMetadataClient.getEntityTags(
         new NamespaceId(getContext().getNamespace()), entityType, entityName);
       if (set.contains(tagName)) {
-        discoveryMetadataClient.deleteTag(new NamespaceId(getContext().getNamespace()),
-                                          entityType, entityName, tagName);
-        responder.sendStatus(HttpResponseStatus.OK.getCode());
+        if (discoveryMetadataClient.deleteTag(new NamespaceId(getContext().getNamespace()),
+                                          entityType, entityName, tagName)) {
+          responder.sendStatus(HttpResponseStatus.OK.getCode());
+        } else {
+          responder.sendStatus(HttpResponseStatus.BAD_REQUEST.getCode());
+        }
       } else {
         responder.sendJson(HttpResponseStatus.NOT_FOUND.getCode(), USER_TAG_NOTFOUND);
       }
