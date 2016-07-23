@@ -136,10 +136,10 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
                     throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
     if (entityType.toLowerCase().equals("dataset")) {
       DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
-      return getTags(datasetId.toId());
+      return getTags(datasetId.toId(), MetadataScope.USER);
     } else {
       StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
-      return getTags(streamId.toId());
+      return getTags(streamId.toId(), MetadataScope.USER);
     }
   }
 
