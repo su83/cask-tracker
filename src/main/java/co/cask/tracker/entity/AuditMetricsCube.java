@@ -62,6 +62,7 @@ public class AuditMetricsCube extends AbstractDataset {
     HOUR(TimeUnit.HOURS);
 
     private final TimeUnit timeUnit;
+
     Bucket(TimeUnit timeUnit) {
       this.timeUnit = timeUnit;
     }
@@ -477,8 +478,14 @@ public class AuditMetricsCube extends AbstractDataset {
     Collection<TimeSeries> datasetResults = auditMetrics.query(datasetQuery);
     Collection<TimeSeries> streamResults = auditMetrics.query(streamQuery);
     // Single measurement queried; Aggregated for the 1st 365 days
-    return datasetResults.iterator().next().getTimeValues().get(0).getValue() +
-      streamResults.iterator().next().getTimeValues().get(0).getValue();
+    long totalActivity = 0;
+    if (!datasetResults.isEmpty()) {
+      totalActivity += datasetResults.iterator().next().getTimeValues().get(0).getValue();
+    }
+    if (!streamResults.isEmpty()) {
+      totalActivity += streamResults.iterator().next().getTimeValues().get(0).getValue();
+    }
+    return totalActivity;
   }
 
   // Total Audit log messages for a given entityName and entityType
@@ -496,13 +503,12 @@ public class AuditMetricsCube extends AbstractDataset {
       .limit(1000)
       .build();
 
-    try {
-      Collection<TimeSeries> results = auditMetrics.query(query);
-      // Single measurement queried; Aggregated for the 1st 365 days
+    Collection<TimeSeries> results = auditMetrics.query(query);
+    // Single measurement queried; Aggregated for the 1st 365 days
+    if (!results.isEmpty()) {
       return results.iterator().next().getTimeValues().get(0).getValue();
-    } catch (NoSuchElementException e) {
-      return 0L; // No Cube entry for given query exists. 0 total programs.
     }
+    return 0L;
   }
 
   public List<String> getEntities(String namespace, String entityType) {
@@ -519,13 +525,14 @@ public class AuditMetricsCube extends AbstractDataset {
       .dimension("entity_name")
       .limit(1000)
       .build();
-
-    Collection<TimeSeries> result = auditMetrics.query(query);
-    List<String> entityList = new LinkedList<>();
-    for (TimeSeries t : result) {
-      entityList.add(t.getDimensionValues().get("entity_name"));
-    }
-    return entityList;
+      Collection<TimeSeries> result = auditMetrics.query(query);
+      List<String> entityList = new LinkedList<>();
+      for (TimeSeries t : result) {
+        if (t.getDimensionValues().containsKey("entity_name")) {
+          entityList.add(t.getDimensionValues().get("entity_name"));
+        }
+      }
+      return entityList;
   }
 
   // This will be updated if we change how we select resolution.
