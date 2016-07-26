@@ -90,7 +90,7 @@ public class EntityIdHelper {
         name = ((SystemServiceId) entityId).getService();
         break;
       default:
-        throw new IllegalStateException("Unknown entity type: " + entityType);
+        throw new IllegalArgumentException("Unknown entity type: " + entityType);
     }
     return name;
   }

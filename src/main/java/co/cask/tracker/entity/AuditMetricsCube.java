@@ -363,10 +363,13 @@ public class AuditMetricsCube extends AbstractDataset {
       .build();
 
     Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
-    TimeSeries t = results.iterator().next();
-    List<TimeValue> timeValueList = t.getTimeValues();
+    if (!results.isEmpty()) {
+      TimeSeries t = results.iterator().next();
+      List<TimeValue> timeValueList = t.getTimeValues();
 
-    return new AuditHistogramResult(resolution.name(), timeValueList);
+      return new AuditHistogramResult(resolution.name(), timeValueList);
+    }
+    return new AuditHistogramResult();
   }
 
   // Overload (String entityType, String entityName)
@@ -387,10 +390,13 @@ public class AuditMetricsCube extends AbstractDataset {
       .build();
 
     Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
-    TimeSeries t = results.iterator().next();
-    List<TimeValue> timeValueList = t.getTimeValues();
+    if (!results.isEmpty()) {
+      TimeSeries t = results.iterator().next();
+      List<TimeValue> timeValueList = t.getTimeValues();
 
-    return new AuditHistogramResult(resolution.name(), timeValueList);
+      return new AuditHistogramResult(resolution.name(), timeValueList);
+    }
+    return new AuditHistogramResult();
   }
 
   // Total number of unique programs
