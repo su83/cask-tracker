@@ -35,6 +35,7 @@ import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.tracker.utils.EntityIdHelper;
 
+import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Strings;
 
 import java.io.IOException;
@@ -90,6 +91,9 @@ public class AuditMetricsCube extends AbstractDataset {
         new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
                                                   "and was not written to AuditMetricsCube",
                                                 entityId));
+    }
+    if (ParameterCheck.isTrackerDataset(entityId)) {
+      return;
     }
     String namespace = ((NamespacedId) entityId).getNamespace();
     EntityType entityType = entityId.getEntity();
