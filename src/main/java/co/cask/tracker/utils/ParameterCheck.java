@@ -16,6 +16,9 @@
 
 package co.cask.tracker.utils;
 
+import co.cask.cdap.proto.element.EntityType;
+import co.cask.cdap.proto.id.EntityId;
+import co.cask.tracker.TrackerApp;
 import com.google.common.base.Strings;
 
 import java.util.concurrent.TimeUnit;
@@ -67,6 +70,21 @@ public class ParameterCheck {
       timeStamp = -1;
     }
     return timeStamp;
+  }
+
+  public static boolean isTrackerDataset(EntityId entityId) {
+    if (entityId.getEntity() != EntityType.DATASET) {
+      return false;
+    }
+    switch (EntityIdHelper.getEntityName(entityId)) {
+      case TrackerApp.AUDIT_LOG_DATASET_NAME:
+      case TrackerApp.AUDIT_METRICS_DATASET_NAME:
+      case TrackerApp.AUDIT_TAGS_DATASET_NAME:
+      case TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME:
+        return true;
+      default:
+        return false;
+    }
   }
 
 }

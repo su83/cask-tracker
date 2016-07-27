@@ -244,6 +244,16 @@ public class TrackerAppTest extends TestBase {
     Assert.assertEquals(result.getBucketInterval(), "DAY");
   }
 
+  @Test
+  public void testTrackerDatasetFilter() throws Exception {
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset&entityName="
+                                           + TrackerApp.AUDIT_LOG_DATASET_NAME,
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Assert.assertEquals(0, result.getResults().size());
+  }
+
   /* Tests for Preferred Tags
    *
    */
@@ -547,7 +557,7 @@ public class TrackerAppTest extends TestBase {
                                                     EntityId.fromString("program:ns1.b.SERVICE.program2"))
                  )
     );
-    testData.add(new AuditMessage(1456956659507L,
+    testData.add(new AuditMessage(1456956659511L,
                                   NamespaceId.DEFAULT.dataset("ds9"),
                                   "user4",
                                   AuditType.ACCESS,
@@ -555,11 +565,19 @@ public class TrackerAppTest extends TestBase {
                                                     EntityId.fromString("program:ns1.b.SERVICE.program2"))
                  )
     );
-    testData.add(new AuditMessage(1456956659471L,
+    testData.add(new AuditMessage(1456956659512L,
                                   EntityId.fromString("dataset:default.ds5"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
+    testData.add(new AuditMessage(1456956659513L,
+                                  NamespaceId.DEFAULT.dataset(TrackerApp.AUDIT_LOG_DATASET_NAME),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.WRITE,
+                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                )
+    );
     return testData;
   }
 }

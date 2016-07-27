@@ -43,7 +43,7 @@ public class EntityIdHelper {
   /*
    * Get the entity name of an entity
    */
-  public static String getEntityName(EntityId entityId) throws IOException {
+  public static String getEntityName(EntityId entityId) {
     EntityType entityType = entityId.getEntity();
     String name;
     switch (entityType) {
@@ -90,7 +90,7 @@ public class EntityIdHelper {
         name = ((SystemServiceId) entityId).getService();
         break;
       default:
-        throw new IOException("Unknown entity type: " + entityType);
+        throw new IllegalArgumentException("Unknown entity type: " + entityType);
     }
     return name;
   }
