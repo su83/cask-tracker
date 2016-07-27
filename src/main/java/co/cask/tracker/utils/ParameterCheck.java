@@ -36,11 +36,13 @@ public class ParameterCheck {
   public static final String OFFSET_INVALID = "offset cannot be negative.";
   public static final String STARTTIME_GREATER_THAN_ENDTIME = "startTime cannot be greater than endTime.";
   public static final String INVALID_TIME_FORMAT = "startTime or endTime was not in the correct format. " +
-                                                    "Use unix timestamps or date mathematics such as now-1h.";
+    "Use unix timestamps or date mathematics such as now-1h.";
   public static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized.";
   public static final String SPECIFY_ENTITY_NAME_AND_TYPE = "entityName and entityType must be specified.";
 
-  public static boolean isLimitValid (int limit) {
+  public static final String TRACKER_APP_DISPLAY_NAME = "_Tracker";
+
+  public static boolean isLimitValid(int limit) {
     return (limit > 0);
   }
 
@@ -48,15 +50,15 @@ public class ParameterCheck {
     return (offset >= 0);
   }
 
-  public static boolean isDatasetSpecified (String entityType, String entityName) {
+  public static boolean isDatasetSpecified(String entityType, String entityName) {
     return (!Strings.isNullOrEmpty(entityType) && !Strings.isNullOrEmpty(entityName));
   }
 
-  public static boolean isTimeFrameValid (long startTime, long endTime) {
+  public static boolean isTimeFrameValid(long startTime, long endTime) {
     return (startTime < endTime);
   }
 
-  public static boolean isTimeFormatValid (long startTime, long endTime) {
+  public static boolean isTimeFormatValid(long startTime, long endTime) {
     return (startTime != -1 && endTime != -1);
   }
 
@@ -90,6 +92,13 @@ public class ParameterCheck {
   }
 
   public static boolean isTrackerEntity(EntityId entityId) {
-    return EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME);
+    if (EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME)
+      || EntityIdHelper.getParentApplicationName(entityId).equals(TRACKER_APP_DISPLAY_NAME)) {
+      return true;
+    } else if (entityId.getEntity() == EntityType.PROGRAM
+      && EntityIdHelper.getEntityName(entityId).equals(AuditLogFlow.FLOW_NAME)) {
+      return true;
+    }
+    return false;
   }
 }
