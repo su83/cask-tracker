@@ -18,7 +18,9 @@ package co.cask.tracker.utils;
 
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.cdap.proto.id.EntityId;
+import co.cask.tracker.AuditLogFlow;
 import co.cask.tracker.TrackerApp;
+import co.cask.tracker.TrackerService;
 import com.google.common.base.Strings;
 
 import java.util.concurrent.TimeUnit;
@@ -87,4 +89,7 @@ public class ParameterCheck {
     }
   }
 
+  public static boolean isTrackerEntity(EntityId entityId) {
+    return EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME);
+  }
 }
