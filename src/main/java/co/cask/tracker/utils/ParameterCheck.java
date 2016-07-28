@@ -94,9 +94,6 @@ public class ParameterCheck {
   public static boolean isTrackerEntity(EntityId entityId) {
     if (EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME)) {
       return true;
-    } else if (entityId.getEntity() == EntityType.PROGRAM
-      && EntityIdHelper.getEntityName(entityId).equals(AuditLogFlow.FLOW_NAME)) {
-      return true;
     }
     return false;
   }
