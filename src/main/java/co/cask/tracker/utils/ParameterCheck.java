@@ -40,8 +40,6 @@ public class ParameterCheck {
   public static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized.";
   public static final String SPECIFY_ENTITY_NAME_AND_TYPE = "entityName and entityType must be specified.";
 
-  public static final String TRACKER_APP_DISPLAY_NAME = "_Tracker";
-
   public static boolean isLimitValid(int limit) {
     return (limit > 0);
   }
@@ -92,9 +90,6 @@ public class ParameterCheck {
   }
 
   public static boolean isTrackerEntity(EntityId entityId) {
-    if (EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME)) {
-      return true;
-    }
-    return false;
+    return EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME);
   }
 }
