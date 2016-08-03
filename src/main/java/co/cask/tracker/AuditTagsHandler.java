@@ -50,7 +50,6 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.ws.rs.DELETE;
@@ -181,7 +180,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     }
   }
 
-
   @Path("v1/tags/{type}/{name}")
   @GET
   public void getAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
@@ -248,10 +246,6 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     }
   }
 
-
-
-
-
   private ZKClientService createZKClient(String zookeeperQuorum) {
     Preconditions.checkNotNull(zookeeperQuorum, "Missing ZooKeeper configuration '%s'", Constants.Zookeeper.QUORUM);
 
@@ -267,7 +261,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   }
 
   private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) {
-    // parse the Host/host header. make a ping request. if its 200, then use that host/port.
+    // Parse the Host/host header and make a ping request. If it's 200, then use that host/port.
     // otherwise do whats below:
     if (discoveryMetadataClient == null) {
       this.discoveryMetadataClient = createMetadataClient(request);
@@ -290,17 +284,17 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
         new MetaClient(config).ping();
       } catch (IOException e) {
         config = ClientConfig.getDefault();
-        LOG.info("Got error while pinging router. Falling back to default client config: " + config, e);
+        LOG.debug("Got error while pinging router. Falling back to default client config: " + config, e);
       }
       return new DiscoveryMetadataClient(config);
 
       // create it based upon ClientConfig if you don't get an exception
     } catch (UnauthenticatedException e) {
-      // authentication is enabled, so we can't go through router. Have to use discovery via zookeeper
-      // Note that in standalone CDAP, can't use zookeeper discovery
-      LOG.info("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
+      // Authentication is enabled, so we can't go through router. Have to use discovery via zookeeper.
+      // Note that we can't use zookeeper discovery in CDAP standalone.
+      LOG.debug("Got error while pinging router. Falling back to DiscoveryMetadataClient.", e);
       LOG.info("Using discovery with zookeeper quorum {}", zookeeperQuorum);
-      //delete "kafca" to make "/cdap/kafka" to "/cdap"
+      //delete "kafka" to make "/cdap/kafka" to "/cdap"
       ZKClientService zkClient = createZKClient(zookeeperQuorum.replace("/kafka", ""));
       zkClient.startAndWait();
       ZKDiscoveryService zkDiscoveryService = new ZKDiscoveryService(zkClient);
