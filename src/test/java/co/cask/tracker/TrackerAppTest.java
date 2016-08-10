@@ -233,13 +233,13 @@ public class TrackerAppTest extends TestBase {
   public void testResolutionBucket() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/audit-histogram?entityType=dataset" +
-                                           "&entityName=ds1&startTime=now-6d&endTime=now",
+                                           "&entityName=ds1&startTime=now-5d&endTime=now",
                                          HttpResponseStatus.OK.getCode());
     AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
     Assert.assertEquals(result.getBucketInterval(), "HOUR");
     response = getServiceResponse(trackerServiceManager,
                                   "v1/auditmetrics/audit-histogram?entityType=dataset&entityName=ds1" +
-                                    "&startTime=now-8d&endTime=now",
+                                    "&startTime=now-7d&endTime=now",
                                   HttpResponseStatus.OK.getCode());
     result = GSON.fromJson(response, AuditHistogramResult.class);
     Assert.assertEquals(result.getBucketInterval(), "DAY");

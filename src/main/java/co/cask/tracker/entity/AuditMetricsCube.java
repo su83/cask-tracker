@@ -554,7 +554,7 @@ public class AuditMetricsCube extends AbstractDataset {
 
   // This will be updated if we change how we select resolution.
   private Bucket getResolutionBucket(long startTime, long endTime) {
-    if ((endTime - startTime) > TimeUnit.DAYS.toSeconds(7L)) {
+    if ((endTime - startTime) > TimeUnit.DAYS.toSeconds(6L)) {
       return Bucket.DAY;
     }
     return Bucket.HOUR;
