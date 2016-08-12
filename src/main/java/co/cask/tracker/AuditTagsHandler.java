@@ -29,6 +29,7 @@ import co.cask.cdap.common.UnauthenticatedException;
 import co.cask.cdap.common.conf.Constants;
 import co.cask.cdap.internal.guava.reflect.TypeToken;
 import co.cask.cdap.proto.id.NamespaceId;
+import co.cask.cdap.security.spi.authorization.UnauthorizedException;
 import co.cask.tracker.entity.AuditTagsTable;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.Charsets;
@@ -161,22 +162,25 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   public void getTags(HttpServiceRequest request, HttpServiceResponder responder,
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
-        throws IOException, NotFoundException, UnauthenticatedException, BadRequestException {
+    throws IOException, NotFoundException, UnauthenticatedException, BadRequestException, UnauthorizedException {
     discoveryMetadataClient = getDiscoveryMetadataClient(request);
-    if (type.equals("user")) {
-      responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getUserTags(discoveryMetadataClient,
-                                                    prefix, new NamespaceId(getContext().getNamespace())));
-    } else if (type.equals("preferred")) {
-      responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getPreferredTags(discoveryMetadataClient, prefix,
-                                                         new NamespaceId(getContext().getNamespace())));
-    } else if (type.equals("all")) {
-      responder.sendJson(HttpResponseStatus.OK.getCode(),
-                         auditTagsTable.getTags(discoveryMetadataClient,
-                                                prefix, new NamespaceId(getContext().getNamespace())));
-    } else {
-      responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+    NamespaceId namespace = new NamespaceId(getContext().getNamespace());
+    switch (type) {
+      case "user":
+        responder.sendJson(HttpResponseStatus.OK.getCode(),
+                           auditTagsTable.getUserTags(discoveryMetadataClient, prefix, namespace));
+        break;
+      case "preferred":
+        responder.sendJson(HttpResponseStatus.OK.getCode(),
+                           auditTagsTable.getPreferredTags(discoveryMetadataClient, prefix, namespace));
+        break;
+      case "all":
+        responder.sendJson(HttpResponseStatus.OK.getCode(),
+                           auditTagsTable.getTags(discoveryMetadataClient, prefix, namespace));
+        break;
+      default:
+        responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
+        break;
     }
   }
 
@@ -185,7 +189,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   public void getAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
                     @PathParam("type") String entityType,
                     @PathParam("name") String entityName)
-                        throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException, UnauthorizedException {
     DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       responder.sendJson(HttpResponseStatus.OK.getCode(),
@@ -202,7 +206,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   public void addAttachedTags(HttpServiceRequest request, HttpServiceResponder responder,
                              @PathParam("type") String entityType,
                              @PathParam("name") String entityName)
-                throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException, UnauthorizedException {
     DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
     ByteBuffer requestContents = request.getContent();
     if (requestContents == null) {
@@ -225,7 +229,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                               @PathParam("type") String entityType,
                               @PathParam("name") String entityName,
                               @QueryParam("tagname") String tagName)
-    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException, UnauthorizedException {
     DiscoveryMetadataClient discoveryMetadataClient = getDiscoveryMetadataClient(request);
     if (entityType.toLowerCase().equals("dataset") || entityType.toLowerCase().equals("stream")) {
       Set<String> set = discoveryMetadataClient.getEntityTags(
@@ -260,7 +264,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     );
   }
 
-  private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) {
+  private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) throws UnauthorizedException {
     // Parse the Host/host header and make a ping request. If it's 200, then use that host/port.
     // otherwise do whats below:
     if (discoveryMetadataClient == null) {
@@ -269,7 +273,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
     return  this.discoveryMetadataClient;
   }
 
-  private DiscoveryMetadataClient createMetadataClient(HttpServiceRequest request) {
+  private DiscoveryMetadataClient createMetadataClient(HttpServiceRequest request) throws UnauthorizedException {
     try {
       String hostport = Objects.firstNonNull(request.getHeader("host"), request.getHeader("Host"));
       LOG.info("Creating ConnectionConfig using host and port {}", hostport);
