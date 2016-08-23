@@ -35,6 +35,7 @@ import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.tracker.utils.EntityIdHelper;
 
+import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Strings;
 
 import java.io.IOException;
@@ -62,6 +63,7 @@ public class AuditMetricsCube extends AbstractDataset {
     HOUR(TimeUnit.HOURS);
 
     private final TimeUnit timeUnit;
+
     Bucket(TimeUnit timeUnit) {
       this.timeUnit = timeUnit;
     }
@@ -91,6 +93,9 @@ public class AuditMetricsCube extends AbstractDataset {
                                                   "and was not written to AuditMetricsCube",
                                                 entityId));
     }
+    if (ParameterCheck.isTrackerDataset(entityId)) {
+      return;
+    }
     String namespace = ((NamespacedId) entityId).getNamespace();
     EntityType entityType = entityId.getEntity();
     String type = entityType.name().toLowerCase();
@@ -106,6 +111,9 @@ public class AuditMetricsCube extends AbstractDataset {
     if (auditMessage.getPayload() instanceof AccessPayload) {
       AccessPayload accessPayload = ((AccessPayload) auditMessage.getPayload());
       EntityId accessor = accessPayload.getAccessor();
+      if (ParameterCheck.isTrackerEntity(accessor)) {
+        return;
+      }
       // Accounting for cross-namespace dataset access
       if (accessor instanceof NamespacedId) {
         String accessorNamespace = ((NamespacedId) accessor).getNamespace();
@@ -211,6 +219,7 @@ public class AuditMetricsCube extends AbstractDataset {
       .select()
       .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
       .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.UNKNOWN.name().toLowerCase(), AggregationFunction.SUM)
       .from()
       .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
       .where()
@@ -235,6 +244,7 @@ public class AuditMetricsCube extends AbstractDataset {
       .select()
       .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
       .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.UNKNOWN.name().toLowerCase(), AggregationFunction.SUM)
       .from()
       .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
       .where()
@@ -284,6 +294,7 @@ public class AuditMetricsCube extends AbstractDataset {
       .select()
       .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
       .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.UNKNOWN.name().toLowerCase(), AggregationFunction.SUM)
       .from()
       .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
       .where()
@@ -308,6 +319,7 @@ public class AuditMetricsCube extends AbstractDataset {
       .select()
       .measurement(AccessType.READ.name().toLowerCase(), AggregationFunction.SUM)
       .measurement(AccessType.WRITE.name().toLowerCase(), AggregationFunction.SUM)
+      .measurement(AccessType.UNKNOWN.name().toLowerCase(), AggregationFunction.SUM)
       .from()
       .resolution(TimeUnit.DAYS.toSeconds(365L), TimeUnit.SECONDS)
       .where()
@@ -359,10 +371,13 @@ public class AuditMetricsCube extends AbstractDataset {
       .build();
 
     Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
-    TimeSeries t = results.iterator().next();
-    List<TimeValue> timeValueList = t.getTimeValues();
+    if (!results.isEmpty()) {
+      TimeSeries t = results.iterator().next();
+      List<TimeValue> timeValueList = t.getTimeValues();
 
-    return new AuditHistogramResult(resolution.name(), timeValueList);
+      return new AuditHistogramResult(resolution.name(), timeValueList);
+    }
+    return new AuditHistogramResult();
   }
 
   // Overload (String entityType, String entityName)
@@ -383,10 +398,13 @@ public class AuditMetricsCube extends AbstractDataset {
       .build();
 
     Collection<TimeSeries> results = auditMetrics.query(histogramQuery);
-    TimeSeries t = results.iterator().next();
-    List<TimeValue> timeValueList = t.getTimeValues();
+    if (!results.isEmpty()) {
+      TimeSeries t = results.iterator().next();
+      List<TimeValue> timeValueList = t.getTimeValues();
 
-    return new AuditHistogramResult(resolution.name(), timeValueList);
+      return new AuditHistogramResult(resolution.name(), timeValueList);
+    }
+    return new AuditHistogramResult();
   }
 
   // Total number of unique programs
@@ -477,8 +495,14 @@ public class AuditMetricsCube extends AbstractDataset {
     Collection<TimeSeries> datasetResults = auditMetrics.query(datasetQuery);
     Collection<TimeSeries> streamResults = auditMetrics.query(streamQuery);
     // Single measurement queried; Aggregated for the 1st 365 days
-    return datasetResults.iterator().next().getTimeValues().get(0).getValue() +
-      streamResults.iterator().next().getTimeValues().get(0).getValue();
+    long totalActivity = 0;
+    if (!datasetResults.isEmpty()) {
+      totalActivity += datasetResults.iterator().next().getTimeValues().get(0).getValue();
+    }
+    if (!streamResults.isEmpty()) {
+      totalActivity += streamResults.iterator().next().getTimeValues().get(0).getValue();
+    }
+    return totalActivity;
   }
 
   // Total Audit log messages for a given entityName and entityType
@@ -496,13 +520,12 @@ public class AuditMetricsCube extends AbstractDataset {
       .limit(1000)
       .build();
 
-    try {
-      Collection<TimeSeries> results = auditMetrics.query(query);
-      // Single measurement queried; Aggregated for the 1st 365 days
+    Collection<TimeSeries> results = auditMetrics.query(query);
+    // Single measurement queried; Aggregated for the 1st 365 days
+    if (!results.isEmpty()) {
       return results.iterator().next().getTimeValues().get(0).getValue();
-    } catch (NoSuchElementException e) {
-      return 0L; // No Cube entry for given query exists. 0 total programs.
     }
+    return 0L;
   }
 
   public List<String> getEntities(String namespace, String entityType) {
@@ -519,18 +542,19 @@ public class AuditMetricsCube extends AbstractDataset {
       .dimension("entity_name")
       .limit(1000)
       .build();
-
-    Collection<TimeSeries> result = auditMetrics.query(query);
-    List<String> entityList = new LinkedList<>();
-    for (TimeSeries t : result) {
-      entityList.add(t.getDimensionValues().get("entity_name"));
-    }
-    return entityList;
+      Collection<TimeSeries> result = auditMetrics.query(query);
+      List<String> entityList = new LinkedList<>();
+      for (TimeSeries t : result) {
+        if (t.getDimensionValues().containsKey("entity_name")) {
+          entityList.add(t.getDimensionValues().get("entity_name"));
+        }
+      }
+      return entityList;
   }
 
   // This will be updated if we change how we select resolution.
   private Bucket getResolutionBucket(long startTime, long endTime) {
-    if ((endTime - startTime) > TimeUnit.DAYS.toSeconds(7L)) {
+    if ((endTime - startTime) > TimeUnit.DAYS.toSeconds(6L)) {
       return Bucket.DAY;
     }
     return Bucket.HOUR;

@@ -18,7 +18,9 @@ package co.cask.tracker.entity;
 
 import co.cask.cdap.api.dataset.lib.cube.TimeValue;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * A POJO to hold the results for the TopN query.
@@ -30,6 +32,11 @@ public class AuditHistogramResult {
   public AuditHistogramResult(String bucketInterval, Collection<TimeValue> results) {
     this.bucketInterval = bucketInterval;
     this.results = results;
+  }
+
+  // Empty result
+  public AuditHistogramResult() {
+    this("DAY", new ArrayList<TimeValue>());
   }
 
   public Collection<TimeValue> getResults() {

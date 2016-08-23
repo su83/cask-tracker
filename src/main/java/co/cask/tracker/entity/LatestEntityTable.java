@@ -29,6 +29,7 @@ import co.cask.cdap.proto.audit.payload.access.AccessPayload;
 import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.NamespacedId;
 import co.cask.tracker.utils.EntityIdHelper;
+import co.cask.tracker.utils.ParameterCheck;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -60,6 +61,9 @@ public final class LatestEntityTable extends AbstractDataset {
         new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
                                                   "and was not written to LatestEntityTable",
                                                 entityId));
+    }
+    if (ParameterCheck.isTrackerDataset(entityId)) {
+      return;
     }
     String namespace = ((NamespacedId) entityId).getNamespace();
     String entityName = EntityIdHelper.getEntityName(entityId);

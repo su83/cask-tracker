@@ -25,7 +25,7 @@ import com.google.common.base.Strings;
  */
 public class AuditLogKafkaConfig {
 
-  private static final String DEFAULT_OFFSET_DATASET = "_kafkaOffset";
+  public static final String DEFAULT_OFFSET_DATASET = "_kafkaOffset";
   private static final String DEFAULT_TOPIC = "audit";
   private static final Integer DEFAULT_PARTITIONS = 10;
 
