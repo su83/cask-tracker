@@ -43,7 +43,7 @@ public class EntityIdHelper {
   /*
    * Get the entity name of an entity
    */
-  public static String getEntityName(EntityId entityId) throws IOException {
+  public static String getEntityName(EntityId entityId) {
     EntityType entityType = entityId.getEntity();
     String name;
     switch (entityType) {
@@ -90,15 +90,15 @@ public class EntityIdHelper {
         name = ((SystemServiceId) entityId).getService();
         break;
       default:
-        throw new IOException("Unknown entity type: " + entityType);
+        throw new IllegalArgumentException("Unknown entity type: " + entityType);
     }
     return name;
   }
 
   /*
-   * Get the parent application name of an entity if it has one
+   * Get the parent application name of an entity if it has one. Returns empty String otherwise.
    */
-  public static String getParentApplicationName(EntityId entityId) throws IOException {
+  public static String getParentApplicationName(EntityId entityId) {
     EntityType entityType = entityId.getEntity();
     String name;
     switch (entityType) {
@@ -127,7 +127,7 @@ public class EntityIdHelper {
   }
 
   /*
-   * Get the program type of an entity.
+   * Get the program type of an entity. Return empty String otherwise.
    */
   public static String getProgramType(EntityId entityId) throws IOException {
     if (entityId instanceof ProgramId) {

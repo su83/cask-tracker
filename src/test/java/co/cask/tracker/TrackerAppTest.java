@@ -35,6 +35,7 @@ import co.cask.cdap.test.ServiceManager;
 import co.cask.cdap.test.StreamManager;
 import co.cask.cdap.test.TestBase;
 import co.cask.cdap.test.TestConfiguration;
+import co.cask.tracker.config.AuditLogKafkaConfig;
 import co.cask.tracker.entity.AuditHistogramResult;
 import co.cask.tracker.entity.AuditLogResponse;
 import co.cask.tracker.entity.TagsResult;
@@ -232,16 +233,41 @@ public class TrackerAppTest extends TestBase {
   public void testResolutionBucket() throws Exception {
     String response = getServiceResponse(trackerServiceManager,
                                          "v1/auditmetrics/audit-histogram?entityType=dataset" +
-                                           "&entityName=ds1&startTime=now-6d&endTime=now",
+                                           "&entityName=ds1&startTime=now-5d&endTime=now",
                                          HttpResponseStatus.OK.getCode());
     AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
     Assert.assertEquals(result.getBucketInterval(), "HOUR");
     response = getServiceResponse(trackerServiceManager,
                                   "v1/auditmetrics/audit-histogram?entityType=dataset&entityName=ds1" +
-                                    "&startTime=now-8d&endTime=now",
+                                    "&startTime=now-7d&endTime=now",
                                   HttpResponseStatus.OK.getCode());
     result = GSON.fromJson(response, AuditHistogramResult.class);
     Assert.assertEquals(result.getBucketInterval(), "DAY");
+  }
+
+  @Test
+  public void testTrackerEntityFilter() throws Exception {
+    // Test dataset filter
+    String response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset&entityName="
+                                           + TrackerApp.AUDIT_LOG_DATASET_NAME,
+                                         HttpResponseStatus.OK.getCode());
+    AuditHistogramResult result = GSON.fromJson(response, AuditHistogramResult.class);
+    Assert.assertEquals(0, result.getResults().size());
+
+    response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/audit-histogram?entityType=dataset&entityName="
+                                           + AuditLogKafkaConfig.DEFAULT_OFFSET_DATASET,
+                                         HttpResponseStatus.OK.getCode());
+    result = GSON.fromJson(response, AuditHistogramResult.class);
+    Assert.assertEquals(0, result.getResults().size());
+
+    // Test entity filter
+    response = getServiceResponse(trackerServiceManager,
+                                         "v1/auditmetrics/top-entities/programs?entityName=dsx&entityType=dataset",
+                                         HttpResponseStatus.OK.getCode());
+    List<TopProgramsResult> programsResults = GSON.fromJson(response, PROGRAM_LIST);
+    Assert.assertEquals(0, programsResults.size());
   }
 
   /* Tests for Preferred Tags
@@ -547,7 +573,7 @@ public class TrackerAppTest extends TestBase {
                                                     EntityId.fromString("program:ns1.b.SERVICE.program2"))
                  )
     );
-    testData.add(new AuditMessage(1456956659507L,
+    testData.add(new AuditMessage(1456956659511L,
                                   NamespaceId.DEFAULT.dataset("ds9"),
                                   "user4",
                                   AuditType.ACCESS,
@@ -555,11 +581,37 @@ public class TrackerAppTest extends TestBase {
                                                     EntityId.fromString("program:ns1.b.SERVICE.program2"))
                  )
     );
-    testData.add(new AuditMessage(1456956659471L,
+    testData.add(new AuditMessage(1456956659512L,
                                   EntityId.fromString("dataset:default.ds5"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
+    testData.add(new AuditMessage(1456956659513L,
+                                  NamespaceId.DEFAULT.dataset(TrackerApp.AUDIT_LOG_DATASET_NAME),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.WRITE,
+                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                 )
+    );
+    testData.add(new AuditMessage(1456956659516L,
+                                  NamespaceId.DEFAULT.dataset("dsx"),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.WRITE,
+                                                    EntityId.fromString(String.format("program:ns1.%s.SERVICE.program1",
+                                                                                      TrackerApp.APP_NAME))
+                                  )
+                 )
+    );
+    testData.add(new AuditMessage(1456956659513L,
+                                  NamespaceId.DEFAULT.dataset(AuditLogKafkaConfig.DEFAULT_OFFSET_DATASET),
+                                  "user4",
+                                  AuditType.ACCESS,
+                                  new AccessPayload(AccessType.WRITE,
+                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                 )
+    );
     return testData;
   }
 }

@@ -16,6 +16,10 @@
 
 package co.cask.tracker.utils;
 
+import co.cask.cdap.proto.element.EntityType;
+import co.cask.cdap.proto.id.EntityId;
+import co.cask.tracker.TrackerApp;
+import co.cask.tracker.config.AuditLogKafkaConfig;
 import com.google.common.base.Strings;
 
 import java.util.concurrent.TimeUnit;
@@ -31,11 +35,11 @@ public class ParameterCheck {
   public static final String OFFSET_INVALID = "offset cannot be negative.";
   public static final String STARTTIME_GREATER_THAN_ENDTIME = "startTime cannot be greater than endTime.";
   public static final String INVALID_TIME_FORMAT = "startTime or endTime was not in the correct format. " +
-                                                    "Use unix timestamps or date mathematics such as now-1h.";
+    "Use unix timestamps or date mathematics such as now-1h.";
   public static final String INVALID_TOP_ENTITY_REQUEST = "Invalid request for top entities: path not recognized.";
   public static final String SPECIFY_ENTITY_NAME_AND_TYPE = "entityName and entityType must be specified.";
 
-  public static boolean isLimitValid (int limit) {
+  public static boolean isLimitValid(int limit) {
     return (limit > 0);
   }
 
@@ -43,15 +47,15 @@ public class ParameterCheck {
     return (offset >= 0);
   }
 
-  public static boolean isDatasetSpecified (String entityType, String entityName) {
+  public static boolean isDatasetSpecified(String entityType, String entityName) {
     return (!Strings.isNullOrEmpty(entityType) && !Strings.isNullOrEmpty(entityName));
   }
 
-  public static boolean isTimeFrameValid (long startTime, long endTime) {
+  public static boolean isTimeFrameValid(long startTime, long endTime) {
     return (startTime < endTime);
   }
 
-  public static boolean isTimeFormatValid (long startTime, long endTime) {
+  public static boolean isTimeFormatValid(long startTime, long endTime) {
     return (startTime != -1 && endTime != -1);
   }
 
@@ -69,4 +73,23 @@ public class ParameterCheck {
     return timeStamp;
   }
 
+  public static boolean isTrackerDataset(EntityId entityId) {
+    if (entityId.getEntity() != EntityType.DATASET) {
+      return false;
+    }
+    switch (EntityIdHelper.getEntityName(entityId)) {
+      case TrackerApp.AUDIT_LOG_DATASET_NAME:
+      case TrackerApp.AUDIT_METRICS_DATASET_NAME:
+      case TrackerApp.AUDIT_TAGS_DATASET_NAME:
+      case TrackerApp.ENTITY_LATEST_TIMESTAMP_DATASET_NAME:
+      case AuditLogKafkaConfig.DEFAULT_OFFSET_DATASET:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public static boolean isTrackerEntity(EntityId entityId) {
+    return EntityIdHelper.getParentApplicationName(entityId).equals(TrackerApp.APP_NAME);
+  }
 }

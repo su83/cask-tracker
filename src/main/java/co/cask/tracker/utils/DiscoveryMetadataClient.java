@@ -33,6 +33,7 @@ import co.cask.cdap.proto.id.StreamId;
 import co.cask.cdap.proto.metadata.MetadataScope;
 import co.cask.cdap.proto.metadata.MetadataSearchResultRecord;
 import co.cask.cdap.proto.metadata.MetadataSearchTargetType;
+import co.cask.cdap.security.spi.authorization.UnauthorizedException;
 import co.cask.common.http.HttpRequest;
 import co.cask.common.http.HttpRequests;
 import co.cask.common.http.HttpResponse;
@@ -79,7 +80,7 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
 
   @Override
   protected HttpResponse execute(HttpRequest request,  int... allowedErrorCodes)
-    throws IOException, UnauthenticatedException {
+    throws IOException, UnauthenticatedException, UnauthorizedException {
     if (mode == DISCOVERY) {
       return HttpRequests.execute(request);
     } else {
@@ -109,21 +110,17 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
     throw new ServiceUnavailableException(Constants.Service.METADATA_SERVICE);
   }
 
-  public int getEntityNum(String tag, NamespaceId namespace) throws IOException, UnauthenticatedException,
-    NotFoundException, BadRequestException {
-    Set<MetadataSearchResultRecord> metadataSet =
-      searchMetadata(namespace.toId(), tag,
-                         ImmutableSet.<MetadataSearchTargetType>of(MetadataSearchTargetType.DATASET,
-                                                                   MetadataSearchTargetType.STREAM));
-    return metadataSet.size();
+  public int getEntityNum(String tag, NamespaceId namespace)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
+    return searchMetadata(namespace.toId(), tag,
+                          ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM)).size();
   }
 
-  public Set<String> getTags(NamespaceId namespace) throws IOException, UnauthenticatedException,
-    NotFoundException, BadRequestException {
+  public Set<String> getTags(NamespaceId namespace)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
     Set<MetadataSearchResultRecord> metadataSet =
       searchMetadata(namespace.toId(), "*",
-                         ImmutableSet.<MetadataSearchTargetType>of(MetadataSearchTargetType.DATASET,
-                                                                   MetadataSearchTargetType.STREAM));
+                     ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM));
     Set<String> tagSet = new HashSet<>();
     for (MetadataSearchResultRecord mdsr: metadataSet) {
       Set<String> set = getTags(mdsr.getEntityId(), MetadataScope.USER);
@@ -133,7 +130,7 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
   }
 
   public Set<String> getEntityTags(NamespaceId namespace, String entityType, String entityName)
-                    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException {
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
     if (entityType.toLowerCase().equals("dataset")) {
       DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
       return getTags(datasetId.toId(), MetadataScope.USER);
@@ -144,13 +141,13 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
   }
 
   public void addTags(NamespaceId namespace, String entityType, String entityName, List<String> tagList)
-                          throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException, UnauthorizedException {
     if (entityType.toLowerCase().equals("dataset")) {
       DatasetId datasetId = new DatasetId(namespace.getNamespace(), entityName);
-      addTags(datasetId.toId(), new HashSet<String>(tagList));
+      addTags(datasetId.toId(), new HashSet<>(tagList));
     } else {
       StreamId streamId = new StreamId(namespace.getNamespace(), entityName);
-      addTags(streamId.toId(), new HashSet<String>(tagList));
+      addTags(streamId.toId(), new HashSet<>(tagList));
     }
   }
 

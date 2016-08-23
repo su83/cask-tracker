@@ -26,8 +26,8 @@ import co.cask.cdap.api.dataset.table.Table;
 import co.cask.cdap.common.BadRequestException;
 import co.cask.cdap.common.NotFoundException;
 import co.cask.cdap.common.UnauthenticatedException;
-
 import co.cask.cdap.proto.id.NamespaceId;
+import co.cask.cdap.security.spi.authorization.UnauthorizedException;
 import co.cask.tracker.utils.DiscoveryMetadataClient;
 import com.google.common.base.CharMatcher;
 
@@ -64,8 +64,7 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
   public TagsResult getUserTags(DiscoveryMetadataClient discoveryMetadataClient, String prefix, NamespaceId namespace)
-    throws IOException, UnauthenticatedException,
-    NotFoundException, BadRequestException {
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
     Map<String, Integer> tagMap = new HashMap<>();
     Set<String> userSet = discoveryMetadataClient.getTags(namespace);
     for (String usertag : userSet) {
@@ -82,13 +81,11 @@ public final class AuditTagsTable extends AbstractDataset {
   }
 
 
-  public TagsResult getPreferredTags(DiscoveryMetadataClient discoveryMetadataClient,
-                                     String prefix, NamespaceId namespace)
-    throws IOException, NotFoundException,
-    UnauthenticatedException, BadRequestException {
+  public TagsResult getPreferredTags(DiscoveryMetadataClient discoveryMetadataClient, String prefix,
+                                     NamespaceId namespace)
+    throws IOException, NotFoundException, UnauthenticatedException, BadRequestException, UnauthorizedException {
     Map<String, Integer> tagMap = new HashMap<>();
-    Scanner scanner = preferredTagsTable.scan(null, null);
-    try {
+    try (Scanner scanner = preferredTagsTable.scan(null, null)) {
       Row row;
       while ((row = scanner.next()) != null) {
         String tag = Bytes.toString(row.getRow());
@@ -96,8 +93,6 @@ public final class AuditTagsTable extends AbstractDataset {
           tagMap.put(tag, discoveryMetadataClient.getEntityNum(tag, namespace));
         }
       }
-    } finally {
-      scanner.close();
     }
     TagsResult result = new TagsResult();
     result.setPreferredSize(tagMap.size());
@@ -107,8 +102,7 @@ public final class AuditTagsTable extends AbstractDataset {
 
 
   public TagsResult getTags(DiscoveryMetadataClient discoveryMetadataClient, String prefix, NamespaceId namespace)
-    throws IOException, NotFoundException,
-    UnauthenticatedException, BadRequestException {
+    throws IOException, NotFoundException, UnauthenticatedException, BadRequestException, UnauthorizedException {
     TagsResult userResult = getUserTags(discoveryMetadataClient, prefix, namespace);
     TagsResult preferredResult = getPreferredTags(discoveryMetadataClient, prefix, namespace);
     preferredResult.setUserSize(userResult.getUserSize());
@@ -120,7 +114,7 @@ public final class AuditTagsTable extends AbstractDataset {
 
   public TagsResult getEntityTags(DiscoveryMetadataClient discoveryMetadataClient, NamespaceId namespace,
                                   String entityType, String entityName)
-                      throws UnauthenticatedException, BadRequestException, NotFoundException, IOException {
+    throws UnauthenticatedException, BadRequestException, NotFoundException, IOException, UnauthorizedException {
     Map<String, Integer> pTagMap = new HashMap<>();
     Map<String, Integer> uTagMap = new HashMap<>();
     Set<String> userSet = discoveryMetadataClient.getEntityTags(namespace, entityType, entityName);
