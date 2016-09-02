@@ -182,7 +182,7 @@ public final class TrackerMeterHandler extends AbstractHttpServiceHandler {
     Collections.sort(list, new Comparator<Map.Entry<Entity, Long>>() {
       @Override
       public int compare(Map.Entry<Entity, Long> o1, Map.Entry<Entity, Long> o2) {
-        return o1.getValue().compareTo(o2.getValue());
+        return o2.getValue().compareTo(o1.getValue());
       }
     });
     Map<Entity, Long> result = new LinkedHashMap<>();
