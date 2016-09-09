@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package co.cask.tracker;
 
 import co.cask.cdap.api.annotation.Property;
@@ -53,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -60,7 +62,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-
 
 /**
  * This class handles requests to the Tracker services API
@@ -80,13 +81,17 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private static final int MAXDELAY = 2000;
 
   private static final Logger LOG = LoggerFactory.getLogger(AuditTagsHandler.class);
+
+  // This is static to be shared across threads of the handler.
+  // We don't want to have each thread having its own zkClient (connection). See TRACKER-225.
+  private static final AtomicReference<DiscoveryMetadataClient> discoveryMetadataClientRef = new AtomicReference<>();
+
   @Property
   private String zookeeperQuorum;
 
   private AuditTagsTable auditTagsTable;
-  private DiscoveryMetadataClient discoveryMetadataClient;
 
-  public  AuditTagsHandler(String zookeeperQuorum) {
+  public AuditTagsHandler(String zookeeperQuorum) {
     this.zookeeperQuorum = zookeeperQuorum;
   }
 
@@ -163,20 +168,19 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
                       @QueryParam("type") @DefaultValue("all") String type,
                       @QueryParam("prefix") @DefaultValue("") String prefix)
     throws IOException, NotFoundException, UnauthenticatedException, BadRequestException, UnauthorizedException {
-    discoveryMetadataClient = getDiscoveryMetadataClient(request);
     NamespaceId namespace = new NamespaceId(getContext().getNamespace());
     switch (type) {
       case "user":
         responder.sendJson(HttpResponseStatus.OK.getCode(),
-                           auditTagsTable.getUserTags(discoveryMetadataClient, prefix, namespace));
+                           auditTagsTable.getUserTags(getDiscoveryMetadataClient(request), prefix, namespace));
         break;
       case "preferred":
         responder.sendJson(HttpResponseStatus.OK.getCode(),
-                           auditTagsTable.getPreferredTags(discoveryMetadataClient, prefix, namespace));
+                           auditTagsTable.getPreferredTags(getDiscoveryMetadataClient(request), prefix, namespace));
         break;
       case "all":
         responder.sendJson(HttpResponseStatus.OK.getCode(),
-                           auditTagsTable.getTags(discoveryMetadataClient, prefix, namespace));
+                           auditTagsTable.getTags(getDiscoveryMetadataClient(request), prefix, namespace));
         break;
       default:
         responder.sendJson(HttpResponseStatus.BAD_REQUEST.getCode(), INVALID_TYPE_PARAMETER);
@@ -267,10 +271,16 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) throws UnauthorizedException {
     // Parse the Host/host header and make a ping request. If it's 200, then use that host/port.
     // otherwise do whats below:
+    DiscoveryMetadataClient discoveryMetadataClient = discoveryMetadataClientRef.get();
     if (discoveryMetadataClient == null) {
-      this.discoveryMetadataClient = createMetadataClient(request);
+      synchronized (discoveryMetadataClientRef) {
+        if (discoveryMetadataClientRef.get() == null) {
+          discoveryMetadataClientRef.set(createMetadataClient(request));
+        }
+        discoveryMetadataClient = discoveryMetadataClientRef.get();
+      }
     }
-    return  this.discoveryMetadataClient;
+    return discoveryMetadataClient;
   }
 
   private DiscoveryMetadataClient createMetadataClient(HttpServiceRequest request) throws UnauthorizedException {
