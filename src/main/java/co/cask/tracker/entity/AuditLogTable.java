@@ -36,7 +36,7 @@ import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.id.NamespacedId;
+import co.cask.cdap.proto.id.NamespacedEntityId;
 import co.cask.tracker.utils.EntityIdHelper;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
@@ -85,14 +85,14 @@ public final class AuditLogTable extends AbstractDataset {
 
   public void write(AuditMessage auditMessage) throws IOException {
     EntityId entityId = auditMessage.getEntityId();
-    if (!(entityId instanceof NamespacedId)) {
+    if (!(entityId instanceof NamespacedEntityId)) {
       throw
         new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
                                                   "and was not written to AuditLogTable",
                                                 entityId));
 
     }
-    String namespace = ((NamespacedId) entityId).getNamespace();
+    String namespace = ((NamespacedEntityId) entityId).getNamespace();
     EntityType entityType = entityId.getEntity();
     AuditType auditType = auditMessage.getType();
     String type = entityType.name().toLowerCase();
