@@ -123,7 +123,7 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
                      ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM));
     Set<String> tagSet = new HashSet<>();
     for (MetadataSearchResultRecord mdsr: metadataSet) {
-      Set<String> set = getTags(mdsr.getEntityId(), MetadataScope.USER);
+      Set<String> set = getTags(mdsr.getEntityId().toId(), MetadataScope.USER);
       tagSet.addAll(set);
     }
     return tagSet;

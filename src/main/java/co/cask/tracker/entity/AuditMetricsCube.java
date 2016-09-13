@@ -32,9 +32,8 @@ import co.cask.cdap.proto.audit.payload.access.AccessPayload;
 import co.cask.cdap.proto.audit.payload.access.AccessType;
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.id.NamespacedId;
+import co.cask.cdap.proto.id.NamespacedEntityId;
 import co.cask.tracker.utils.EntityIdHelper;
-
 import co.cask.tracker.utils.ParameterCheck;
 import com.google.common.base.Strings;
 
@@ -47,7 +46,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +85,7 @@ public class AuditMetricsCube extends AbstractDataset {
    */
   public void write(AuditMessage auditMessage) throws IOException {
     EntityId entityId = auditMessage.getEntityId();
-    if (!(entityId instanceof NamespacedId)) {
+    if (!(entityId instanceof NamespacedEntityId)) {
       throw
         new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
                                                   "and was not written to AuditMetricsCube",
@@ -96,7 +94,7 @@ public class AuditMetricsCube extends AbstractDataset {
     if (ParameterCheck.isTrackerDataset(entityId)) {
       return;
     }
-    String namespace = ((NamespacedId) entityId).getNamespace();
+    String namespace = ((NamespacedEntityId) entityId).getNamespace();
     EntityType entityType = entityId.getEntity();
     String type = entityType.name().toLowerCase();
     String name = EntityIdHelper.getEntityName(entityId);
@@ -115,8 +113,8 @@ public class AuditMetricsCube extends AbstractDataset {
         return;
       }
       // Accounting for cross-namespace dataset access
-      if (accessor instanceof NamespacedId) {
-        String accessorNamespace = ((NamespacedId) accessor).getNamespace();
+      if (accessor instanceof NamespacedEntityId) {
+        String accessorNamespace = ((NamespacedEntityId) accessor).getNamespace();
         fact.addDimensionValue("accessor_namespace", accessorNamespace);
       }
       String appName = EntityIdHelper.getParentApplicationName(accessor);

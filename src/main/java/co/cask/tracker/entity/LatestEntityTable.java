@@ -27,7 +27,7 @@ import co.cask.cdap.proto.audit.AuditMessage;
 import co.cask.cdap.proto.audit.AuditType;
 import co.cask.cdap.proto.audit.payload.access.AccessPayload;
 import co.cask.cdap.proto.id.EntityId;
-import co.cask.cdap.proto.id.NamespacedId;
+import co.cask.cdap.proto.id.NamespacedEntityId;
 import co.cask.tracker.utils.EntityIdHelper;
 import co.cask.tracker.utils.ParameterCheck;
 
@@ -56,7 +56,7 @@ public final class LatestEntityTable extends AbstractDataset {
       return;
     }
     EntityId entityId = auditMessage.getEntityId();
-    if (!(entityId instanceof NamespacedId)) {
+    if (!(entityId instanceof NamespacedEntityId)) {
       throw
         new IllegalStateException(String.format("Entity '%s' does not have a namespace " +
                                                   "and was not written to LatestEntityTable",
@@ -65,7 +65,7 @@ public final class LatestEntityTable extends AbstractDataset {
     if (ParameterCheck.isTrackerDataset(entityId)) {
       return;
     }
-    String namespace = ((NamespacedId) entityId).getNamespace();
+    String namespace = ((NamespacedEntityId) entityId).getNamespace();
     String entityName = EntityIdHelper.getEntityName(entityId);
     String entityType = entityId.getEntity().name();
     String key = getKey(namespace, entityType, entityName);
