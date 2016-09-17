@@ -97,7 +97,7 @@ public class AuditMetricsCube extends AbstractDataset {
     String namespace = ((NamespacedEntityId) entityId).getNamespace();
     EntityType entityType = entityId.getEntity();
     String type = entityType.name().toLowerCase();
-    String name = EntityIdHelper.getEntityName(entityId);
+    String name = entityId.getEntityName();
 
     long ts = System.currentTimeMillis() / 1000;
     CubeFact fact = new CubeFact(ts);
@@ -121,7 +121,7 @@ public class AuditMetricsCube extends AbstractDataset {
       if (!appName.isEmpty()) {
         fact.addDimensionValue("app_name", appName);
       }
-      String programName = EntityIdHelper.getEntityName(accessor);
+      String programName = accessor.getEntityName();
       if (!programName.isEmpty()) {
         fact.addDimensionValue("program_name", programName);
       }

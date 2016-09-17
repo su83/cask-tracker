@@ -96,7 +96,7 @@ public final class AuditLogTable extends AbstractDataset {
     EntityType entityType = entityId.getEntity();
     AuditType auditType = auditMessage.getType();
     String type = entityType.name().toLowerCase();
-    String name = EntityIdHelper.getEntityName(entityId);
+    String name = entityId.getEntityName();
     String user = auditMessage.getUser();
     if (Strings.isNullOrEmpty(user)) {
       user = DEFAULT_USER;
