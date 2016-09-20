@@ -84,7 +84,7 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
 
   // This is static to be shared across threads of the handler.
   // We don't want to have each thread having its own zkClient (connection). See TRACKER-225.
-  private static final AtomicReference<DiscoveryMetadataClient> discoveryMetadataClientRef = new AtomicReference<>();
+  private static final AtomicReference<DiscoveryMetadataClient> DISCOVERY_METADATA_CLIENT_REF = new AtomicReference<>();
 
   @Property
   private String zookeeperQuorum;
@@ -271,13 +271,13 @@ public final class AuditTagsHandler extends AbstractHttpServiceHandler {
   private DiscoveryMetadataClient getDiscoveryMetadataClient(HttpServiceRequest request) throws UnauthorizedException {
     // Parse the Host/host header and make a ping request. If it's 200, then use that host/port.
     // otherwise do whats below:
-    DiscoveryMetadataClient discoveryMetadataClient = discoveryMetadataClientRef.get();
+    DiscoveryMetadataClient discoveryMetadataClient = DISCOVERY_METADATA_CLIENT_REF.get();
     if (discoveryMetadataClient == null) {
-      synchronized (discoveryMetadataClientRef) {
-        if (discoveryMetadataClientRef.get() == null) {
-          discoveryMetadataClientRef.set(createMetadataClient(request));
+      synchronized (DISCOVERY_METADATA_CLIENT_REF) {
+        if (DISCOVERY_METADATA_CLIENT_REF.get() == null) {
+          DISCOVERY_METADATA_CLIENT_REF.set(createMetadataClient(request));
         }
-        discoveryMetadataClient = discoveryMetadataClientRef.get();
+        discoveryMetadataClient = DISCOVERY_METADATA_CLIENT_REF.get();
       }
     }
     return discoveryMetadataClient;
