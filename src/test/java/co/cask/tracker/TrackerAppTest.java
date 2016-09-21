@@ -29,6 +29,7 @@ import co.cask.cdap.proto.codec.AuditMessageTypeAdapter;
 import co.cask.cdap.proto.codec.EntityIdTypeAdapter;
 import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.NamespaceId;
+import co.cask.cdap.proto.id.SystemServiceId;
 import co.cask.cdap.test.ApplicationManager;
 import co.cask.cdap.test.FlowManager;
 import co.cask.cdap.test.ServiceManager;
@@ -459,20 +460,19 @@ public class TrackerAppTest extends TestBase {
   // Adapted from https://wiki.cask.co/display/CE/Audit+information+publishing
   private List<AuditMessage> generateTestData() {
     List<AuditMessage> testData = new ArrayList<>();
+    NamespaceId ns1 = new NamespaceId("ns1");
     testData.add(new AuditMessage(1456956659461L,
                                   NamespaceId.DEFAULT.stream("stream1"),
                                   "user1",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("program_run:ns1.app2.flow.flow1.run1"))
+                                  new AccessPayload(AccessType.WRITE, ns1.app("app2").flow("flow1").run("run1"))
                  )
     );
     testData.add(new AuditMessage(1456956659469L,
                                   NamespaceId.DEFAULT.dataset("ds1"),
                                   "user1",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("system_service:explore"))
+                                  new AccessPayload(AccessType.WRITE, new SystemServiceId("explore"))
                  )
     );
     String metadataPayload = "{ \"previous\": { \"USER\": { \"properties\": { \"uk\": \"uv\", \"uk1\": \"uv2\" }, " +
@@ -481,23 +481,23 @@ public class TrackerAppTest extends TestBase {
       "\"deletions\": { \"USER\": { \"properties\": { \"uk\": \"uv\" }, \"tags\": [ \"ut1\" ] } } }";
     MetadataPayload payload = GSON.fromJson(metadataPayload, MetadataPayload.class);
     testData.add(new AuditMessage(1456956659470L,
-                                  EntityId.fromString("application:default.app1"),
+                                  NamespaceId.DEFAULT.app("app1"),
                                   "user1",
                                   AuditType.METADATA_CHANGE,
                                   payload)
     );
     testData.add(new AuditMessage(1456956659471L,
-                                  EntityId.fromString("dataset:default.ds1"),
+                                  NamespaceId.DEFAULT.dataset("ds1"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
     testData.add(new AuditMessage(1456956659472L,
-                                  EntityId.fromString("dataset:default.ds1"),
+                                  NamespaceId.DEFAULT.dataset("ds1"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
     testData.add(new AuditMessage(1456956659473L,
-                                  EntityId.fromString("dataset:default.ds6"),
+                                  NamespaceId.DEFAULT.dataset("ds6"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
@@ -505,84 +505,74 @@ public class TrackerAppTest extends TestBase {
                                   NamespaceId.DEFAULT.stream("strm123"),
                                   "user1",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("program_run:ns1.app1.flow.flow1.run1"))
+                                  new AccessPayload(AccessType.READ, ns1.app("app1").flow("flow1").run("run1"))
                  )
     );
     testData.add(new AuditMessage(1456956659460L,
                                   NamespaceId.DEFAULT.dataset("ds3"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("system_service:explore"))
+                                  new AccessPayload(AccessType.READ, new SystemServiceId("explore"))
                  )
     );
     testData.add(new AuditMessage(1456956659502L,
                                   NamespaceId.DEFAULT.dataset("ds3"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("system_service:explore"))
+                                  new AccessPayload(AccessType.READ, new SystemServiceId("explore"))
                  )
     );
     testData.add(new AuditMessage(1456956659500L,
                                   NamespaceId.DEFAULT.dataset("ds3"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("system_service:explore"))
+                                  new AccessPayload(AccessType.WRITE, new SystemServiceId("explore"))
                  )
     );
     testData.add(new AuditMessage(1456956659504L,
                                   NamespaceId.DEFAULT.dataset("ds3"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.UNKNOWN,
-                                                    EntityId.fromString("system_service:explore"))
+                                  new AccessPayload(AccessType.UNKNOWN, new SystemServiceId("explore"))
                  )
     );
     testData.add(new AuditMessage(1456956659505L,
                                   NamespaceId.DEFAULT.dataset("ds3"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                                  new AccessPayload(AccessType.WRITE, ns1.app("b").service("program1"))
                  )
     );
     testData.add(new AuditMessage(1456956659506L,
                                   NamespaceId.DEFAULT.dataset("ds1"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("program:ns1.a.SERVICE.program2"))
+                                  new AccessPayload(AccessType.WRITE, ns1.app("a").service("program2"))
                  )
     );
     testData.add(new AuditMessage(1456956659507L,
                                   NamespaceId.DEFAULT.dataset("ds1"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program2"))
+                                  new AccessPayload(AccessType.READ, ns1.app("b").service("program2"))
                  )
     );
     testData.add(new AuditMessage(1456956659509L,
                                   NamespaceId.DEFAULT.dataset("ds8"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program2"))
+                                  new AccessPayload(AccessType.READ, ns1.app("b").service("program2"))
                  )
     );
     testData.add(new AuditMessage(1456956659511L,
                                   NamespaceId.DEFAULT.dataset("ds9"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.READ,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program2"))
+                                  new AccessPayload(AccessType.READ, ns1.app("b").service("program2"))
                  )
     );
     testData.add(new AuditMessage(1456956659512L,
-                                  EntityId.fromString("dataset:default.ds5"),
+                                  NamespaceId.DEFAULT.dataset("ds5"),
                                   "user1",
                                   AuditType.CREATE,
                                   AuditPayload.EMPTY_PAYLOAD));
@@ -590,26 +580,21 @@ public class TrackerAppTest extends TestBase {
                                   NamespaceId.DEFAULT.dataset(TrackerApp.AUDIT_LOG_DATASET_NAME),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                                  new AccessPayload(AccessType.WRITE, ns1.app("b").service("program1"))
                  )
     );
     testData.add(new AuditMessage(1456956659516L,
                                   NamespaceId.DEFAULT.dataset("dsx"),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString(String.format("program:ns1.%s.SERVICE.program1",
-                                                                                      TrackerApp.APP_NAME))
-                                  )
+                                  new AccessPayload(AccessType.WRITE, ns1.app(TrackerApp.APP_NAME).service("program1"))
                  )
     );
     testData.add(new AuditMessage(1456956659513L,
                                   NamespaceId.DEFAULT.dataset(AuditLogKafkaConfig.DEFAULT_OFFSET_DATASET),
                                   "user4",
                                   AuditType.ACCESS,
-                                  new AccessPayload(AccessType.WRITE,
-                                                    EntityId.fromString("program:ns1.b.SERVICE.program1"))
+                                  new AccessPayload(AccessType.WRITE, ns1.app("b").service("program1"))
                  )
     );
     return testData;
