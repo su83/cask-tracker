@@ -95,7 +95,7 @@ public class AuditMetricsCube extends AbstractDataset {
       return;
     }
     String namespace = ((NamespacedEntityId) entityId).getNamespace();
-    EntityType entityType = entityId.getEntity();
+    EntityType entityType = entityId.getEntityType();
     String type = entityType.name().toLowerCase();
     String name = EntityIdHelper.getEntityName(entityId);
 
