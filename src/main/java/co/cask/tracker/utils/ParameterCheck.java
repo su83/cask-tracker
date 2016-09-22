@@ -77,7 +77,7 @@ public class ParameterCheck {
     if (entityId.getEntity() != EntityType.DATASET) {
       return false;
     }
-    switch (EntityIdHelper.getEntityName(entityId)) {
+    switch (entityId.getEntityName()) {
       case TrackerApp.AUDIT_LOG_DATASET_NAME:
       case TrackerApp.AUDIT_METRICS_DATASET_NAME:
       case TrackerApp.AUDIT_TAGS_DATASET_NAME:

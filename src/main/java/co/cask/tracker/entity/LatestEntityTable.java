@@ -66,7 +66,7 @@ public final class LatestEntityTable extends AbstractDataset {
       return;
     }
     String namespace = ((NamespacedEntityId) entityId).getNamespace();
-    String entityName = EntityIdHelper.getEntityName(entityId);
+    String entityName = entityId.getEntityName();
     String entityType = entityId.getEntity().name();
     String key = getKey(namespace, entityType, entityName);
     String timeSinceType = auditMessage.getType().name().toLowerCase();
