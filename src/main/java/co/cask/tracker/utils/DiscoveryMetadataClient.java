@@ -112,15 +112,17 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
 
   public int getEntityNum(String tag, NamespaceId namespace)
     throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
-    return searchMetadata(namespace.toId(), tag,
-                          ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM)).size();
+    return searchMetadata(
+      namespace.toId(), tag,
+      ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM)).getResults().size();
   }
 
   public Set<String> getTags(NamespaceId namespace)
     throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
     Set<MetadataSearchResultRecord> metadataSet =
-      searchMetadata(namespace.toId(), "*",
-                     ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM));
+      searchMetadata(
+        namespace.toId(), "*",
+        ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM)).getResults();
     Set<String> tagSet = new HashSet<>();
     for (MetadataSearchResultRecord mdsr: metadataSet) {
       Set<String> set = getTags(mdsr.getEntityId().toId(), MetadataScope.USER);
