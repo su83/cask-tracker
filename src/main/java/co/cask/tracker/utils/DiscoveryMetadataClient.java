@@ -78,7 +78,8 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
 
   public DiscoveryMetadataClient(ClientConfig clientConfig) {
     this.endpointStrategySupplier = null;
-    this.clientConfig = clientConfig;
+    // simply make a copy, to ensure that the ClientConfig instance we use is never modified
+    this.clientConfig = new ClientConfig.Builder(clientConfig).build();
     this.mode = ROUTER;
   }
 
