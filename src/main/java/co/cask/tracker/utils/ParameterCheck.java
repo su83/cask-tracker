@@ -90,9 +90,9 @@ public class ParameterCheck {
     }
   }
 
-  public static boolean isValidColumnType(String columnType){
-    for (Schema.Type type : Schema.Type.values()){
-      if(type.name().equals(columnType)){
+  public static boolean isValidColumnType(String columnType) {
+    for (Schema.Type type : Schema.Type.values()) {
+      if (type.name().equalsIgnoreCase(columnType)) {
         return true;
       }
     }

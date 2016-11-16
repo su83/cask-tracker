@@ -1,40 +1,32 @@
 package co.cask.tracker.entity;
 
-import co.cask.cdap.api.data.schema.Schema;
-import org.apache.commons.lang.enums.EnumUtils;
+import com.google.common.base.Joiner;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import javax.annotation.Nullable;
 
 /**
- * Created by Abhinav on 11/3/16.
+ * Entity class to hold results for Data dictionary
  */
 public class DictionaryResult {
 
   private String columnName;
-  private final String columnType;
-  private final Boolean isNullable;
-  private final Boolean isPII;
-  private final String description;
+  private String columnType;
+  private Boolean isNullable;
+  private Boolean isPII;
+  private String description;
   private List<String> datasets;
-  private int numberUsing;
 
   public DictionaryResult(String columnName, String columnType, Boolean isNullable, Boolean isPII,
-                          @Nullable String description, List<String> datasets, int numberUsing) {
+                          @Nullable String description, List<String> datasets) {
     this.columnName = columnName;
     this.columnType = columnType;
     this.isNullable = isNullable;
     this.isPII = isPII;
     this.description = description;
     this.datasets = datasets;
-    this.numberUsing = numberUsing;
-  }
-
-  public DictionaryResult(String columnType, Boolean isNullable, Boolean isPII, String description) {
-    this.columnType = columnType;
-    this.isNullable = isNullable;
-    this.isPII = isPII;
-    this.description = description;
   }
 
   public String getColumnName() {
@@ -57,12 +49,36 @@ public class DictionaryResult {
     return description;
   }
 
-  public List<String> getDatasets() {
-    return datasets;
+  public String getDatasets() {
+    return (datasets == null || datasets.isEmpty()) ? "" : Joiner.on(",").join(datasets);
   }
 
-  public int getNumberUsing() {
-    return numberUsing;
+  public void setDatasets(List<String> datasets) {
+    this.datasets = datasets;
+  }
+
+  public LinkedHashMap<String, Object> validate(DictionaryResult other) {
+    LinkedHashMap<String, Object> result = new LinkedHashMap<>();
+    List<String> reason = new ArrayList<>();
+    if (!this.columnName.equals(other.columnName)) {
+      reason.add("The column case did not match the data dictionary.");
+    }
+    if (!this.columnType.equalsIgnoreCase(other.columnType)) {
+      reason.add("The column type did not match the data dictionary.");
+    }
+    if (!this.isNullable().equals(other.isNullable)) {
+      reason.add("IsNullable value did not match the data dictionary.");
+    }
+    if (!reason.isEmpty()) {
+      result.put("columnName", other.columnName);
+      result.put("expectedName", this.columnName);
+      result.put("isNullable", other.isNullable);
+      result.put("expectedNullable", this.isNullable);
+      result.put("columnType", other.columnType);
+      result.put("expectedType", this.columnType);
+      result.put("reason", reason);
+    }
+    return result;
   }
 
 }

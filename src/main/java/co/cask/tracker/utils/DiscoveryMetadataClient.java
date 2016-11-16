@@ -16,6 +16,8 @@
 
 package co.cask.tracker.utils;
 
+
+import co.cask.cdap.api.data.schema.Schema;
 import co.cask.cdap.client.config.ClientConfig;
 import co.cask.cdap.client.util.RESTClient;
 import co.cask.cdap.common.BadRequestException;
@@ -37,18 +39,24 @@ import co.cask.cdap.security.spi.authorization.UnauthorizedException;
 import co.cask.common.http.HttpRequest;
 import co.cask.common.http.HttpRequests;
 import co.cask.common.http.HttpResponse;
+import co.cask.tracker.DataDictionaryHandler;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import org.apache.twill.discovery.Discoverable;
 import org.apache.twill.discovery.DiscoveryServiceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -56,12 +64,14 @@ import java.util.concurrent.TimeUnit;
  * Extends AbstractMetadataClient, interact with CDAP (security)
  */
 public class DiscoveryMetadataClient extends AbstractMetadataClient {
+
+  private static final String SCHEMA = "schema";
   private static final int ROUTER = 0;
   private static final int DISCOVERY = 1;
-
   private final int mode;
   private Supplier<EndpointStrategy> endpointStrategySupplier;
   private ClientConfig clientConfig;
+  private static final Logger LOG = LoggerFactory.getLogger(DiscoveryMetadataClient.class);
 
   public DiscoveryMetadataClient(final DiscoveryServiceClient discoveryClient) {
     this.endpointStrategySupplier = Suppliers.memoize(new Supplier<EndpointStrategy>() {
@@ -131,6 +141,7 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
     return tagSet;
   }
 
+
   public Set<String> getEntityTags(NamespaceId namespace, String entityType, String entityName)
     throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
     if (entityType.toLowerCase().equals("dataset")) {
@@ -166,5 +177,23 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
     } catch (Exception e) {
       return false;
     }
+  }
+
+  public List<HashMap<String, String>> getMetadataSearchRecords(NamespaceId namespace, String column)
+    throws IOException, UnauthenticatedException, NotFoundException, BadRequestException, UnauthorizedException {
+    List<HashMap<String, String>> datasets = new ArrayList<>();
+    Set<MetadataSearchResultRecord> metadataSet =
+      searchMetadata(
+        namespace.toId(), column,
+        ImmutableSet.of(MetadataSearchTargetType.DATASET, MetadataSearchTargetType.STREAM)).getResults();
+    for (MetadataSearchResultRecord mdsr : metadataSet) {
+      Map<String, String> map = getProperties(mdsr.getEntityId().toId());
+      HashMap<String, String> record = new HashMap<>();
+      Schema datasetSchema = Schema.parseJson(map.get(SCHEMA));
+      record.put(DataDictionaryHandler.ENTITY_NAME, mdsr.getEntityId().getEntityName());
+      record.put(DataDictionaryHandler.TYPE, datasetSchema.getField(column).getSchema().getType().toString());
+      datasets.add(record);
+    }
+    return datasets;
   }
 }

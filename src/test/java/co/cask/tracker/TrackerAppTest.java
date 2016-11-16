@@ -47,8 +47,6 @@ import co.cask.tracker.entity.TrackerMeterRequest;
 import co.cask.tracker.entity.TrackerMeterResult;
 import co.cask.tracker.entity.ValidateTagsResult;
 import co.cask.tracker.utils.ParameterCheck;
-import com.google.common.base.Charsets;
-import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -60,8 +58,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -69,6 +65,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+
+import static co.cask.tracker.TestUtils.getServiceResponse;
 
 /**
  * Tests for {@link TrackerApp}.
@@ -401,61 +399,6 @@ public class TrackerAppTest extends TestBase {
     }
     return new String(text);
   }
-
-
-
-  // Request is GET by default
-  private String getServiceResponse(ServiceManager serviceManager,
-                                    String request,
-                                    int expectedResponseCode) throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), request);
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(expectedResponseCode, connection.getResponseCode());
-    String response;
-    try {
-      if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-        response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-      } else if (connection.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
-        response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
-      } else {
-        throw new Exception("Invalid response code returned: " + connection.getResponseCode());
-      }
-    } finally {
-      connection.disconnect();
-    }
-    return response;
-  }
-
-  // Overload (String Type). For requests other than GET.
-  private String getServiceResponse(ServiceManager serviceManager,
-                                    String request, String type, String postRequest,
-                                    int expectedResponseCode) throws Exception {
-    URL url = new URL(serviceManager.getServiceURL(), request);
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    connection.setRequestMethod(type);
-
-    //Feed JSON data if POST
-    if (type.equals("POST")) {
-      connection.setDoOutput(true);
-      connection.getOutputStream().write(postRequest.getBytes());
-    }
-
-    Assert.assertEquals(expectedResponseCode, connection.getResponseCode());
-    String response;
-    try {
-      if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-        response = new String(ByteStreams.toByteArray(connection.getInputStream()), Charsets.UTF_8);
-      } else if (connection.getResponseCode() == HttpURLConnection.HTTP_BAD_REQUEST) {
-        response = new String(ByteStreams.toByteArray(connection.getErrorStream()), Charsets.UTF_8);
-      } else {
-        throw new Exception("Invalid response code returned: " + connection.getResponseCode());
-      }
-    } finally {
-      connection.disconnect();
-    }
-    return response;
-  }
-
 
   // Adapted from https://wiki.cask.co/display/CE/Audit+information+publishing
   private List<AuditMessage> generateTestData() {
