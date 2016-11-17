@@ -45,8 +45,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import org.apache.twill.discovery.Discoverable;
 import org.apache.twill.discovery.DiscoveryServiceClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -71,7 +69,6 @@ public class DiscoveryMetadataClient extends AbstractMetadataClient {
   private final int mode;
   private Supplier<EndpointStrategy> endpointStrategySupplier;
   private ClientConfig clientConfig;
-  private static final Logger LOG = LoggerFactory.getLogger(DiscoveryMetadataClient.class);
 
   public DiscoveryMetadataClient(final DiscoveryServiceClient discoveryClient) {
     this.endpointStrategySupplier = Suppliers.memoize(new Supplier<EndpointStrategy>() {

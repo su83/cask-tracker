@@ -1,3 +1,20 @@
+
+/*
+ * Copyright © 2016 Cask Data, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package co.cask.tracker;
 
 import co.cask.cdap.api.annotation.Property;
@@ -255,8 +272,7 @@ public final class DataDictionaryHandler extends AbstractHttpServiceHandler {
     }
 
     String payload = StandardCharsets.UTF_8.decode(requestContents).toString();
-    Type listType = new TypeToken<List<String>>() {
-    }.getType();
+    Type listType = new TypeToken<List<String>>() { }.getType();
     List<String> columns = GSON.fromJson(payload, listType);
     HashMap<String, List> results = new HashMap<>();
     List<String> errors = new ArrayList<>();
@@ -271,12 +287,11 @@ public final class DataDictionaryHandler extends AbstractHttpServiceHandler {
       }
       results.put(RESULTS, dictionaryResults);
       results.put(ERROR, errors);
-      responder.sendJson(HttpResponseStatus.OK.getCode(), results);
     }
+    responder.sendJson(HttpResponseStatus.OK.getCode(), results);
   }
 
   private DictionaryResult createDictionaryResultFromRow(Row row) {
-    DictionaryResult result;
     String datasetList;
     String columnName = row.getString(FieldNames.columnName.name());
     String coulmnType = row.getString(FieldNames.columnType.name());
@@ -289,7 +304,7 @@ public final class DataDictionaryHandler extends AbstractHttpServiceHandler {
       datasets = Lists.newArrayList(Splitter.on(",").split(datasetList));
     }
     String description = row.getString(FieldNames.description.name());
-    result = new DictionaryResult(columnName, coulmnType, isNullable, isPII, description, datasets);
+    DictionaryResult result = new DictionaryResult(columnName, coulmnType, isNullable, isPII, description, datasets);
     return result;
   }
 

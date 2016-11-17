@@ -1,3 +1,20 @@
+
+/*
+ * Copyright © 2016 Cask Data, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package co.cask.tracker;
 
 import co.cask.cdap.api.data.schema.Schema;
@@ -22,7 +39,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import static co.cask.tracker.TestUtils.getServiceResponse;
 
 /**
  * Unit tests for DataDictionary
@@ -41,12 +57,14 @@ public class DataDictionaryTest extends TestBase {
   private static ApplicationManager testAppManager;
   private static ServiceManager dictionaryServiceManager;
 
+  private static final TestUtils TEST_UTILS = new TestUtils();
+
   private static String colName;
   private static String colNameSecond;
   private static String colNameThird;
 
   @Before
-  public void configureStream() throws Exception {
+  public void configureService() throws Exception {
     testAppManager = deployApplication(TestDictionaryApp.class);
     dictionaryServiceManager = testAppManager.getServiceManager(TrackerService.SERVICE_NAME).start();
     dictionaryServiceManager.waitForStatus(true);
@@ -58,7 +76,7 @@ public class DataDictionaryTest extends TestBase {
     colName = "mycol";
     String rjson = requestJson;
     // Test for adding a column
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName,
                        "POST", requestJson, HttpResponseStatus.OK.getCode());
     DataSetManager<Table> outputmanager = getDataset(TrackerApp.DATA_DICTIONARY_DATASET_NAME);
     Get get = new Get(colName);
@@ -71,8 +89,8 @@ public class DataDictionaryTest extends TestBase {
     Assert.assertFalse(result.getBoolean(DataDictionaryHandler.FieldNames.isPII.name()));
 
     // Test for duplicate column add
-    String response = getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
-                                         HttpResponseStatus.BAD_REQUEST.getCode());
+    String response = TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST",
+                                                    requestJson, HttpResponseStatus.BAD_REQUEST.getCode());
     Assert.assertEquals("mycol already exists in data dictionary", response);
     outputmanager.flush();
   }
@@ -81,7 +99,7 @@ public class DataDictionaryTest extends TestBase {
   public void testWithNullValues() throws Exception {
     colNameSecond = "colWithNullValues";
     // Test for adding column with optional FieldNames as null
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colNameSecond, "POST", requestJson3,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colNameSecond, "POST", requestJson3,
                        HttpResponseStatus.OK.getCode());
     DataSetManager<Table> outputmanager = getDataset(TrackerApp.DATA_DICTIONARY_DATASET_NAME);
     Row result = outputmanager.get().get(new Get(colNameSecond.toLowerCase()));
@@ -95,11 +113,11 @@ public class DataDictionaryTest extends TestBase {
     colName = "firstCol";
     colNameSecond = "secondCol";
 
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
                        HttpResponseStatus.OK.getCode());
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colNameSecond, "POST", requestJson2,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colNameSecond, "POST", requestJson2,
                        HttpResponseStatus.OK.getCode());
-    String response = getServiceResponse(dictionaryServiceManager, "v1/dictionary", "GET",
+    String response = TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary", "GET",
                                          HttpResponseStatus.OK.getCode());
     Type listType = new TypeToken<ArrayList<DictionaryResult>>() {
     }.getType();
@@ -112,9 +130,9 @@ public class DataDictionaryTest extends TestBase {
   public void testUpdate() throws Exception {
     colName = "newColUpdate";
 
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
                        HttpResponseStatus.OK.getCode());
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "PUT", requestJson3,
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "PUT", requestJson3,
                        HttpResponseStatus.OK.getCode());
 
     DataSetManager<Table> outputmanager = getDataset(TrackerApp.DATA_DICTIONARY_DATASET_NAME);
@@ -128,18 +146,18 @@ public class DataDictionaryTest extends TestBase {
 
   @Test
   public void testGetDictionaryFromSchema() throws Exception {
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col1",
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col1",
                        "POST", requestJson, HttpResponseStatus.OK.getCode());
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col2",
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col2",
                        "POST", requestJson2, HttpResponseStatus.OK.getCode());
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col3",
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + "col3",
                        "POST", requestJson2, HttpResponseStatus.OK.getCode());
     List<String> inputColumns = new ArrayList<>();
     inputColumns.add("col1");
     inputColumns.add("col2");
     inputColumns.add("col4");
 
-    String response = getServiceResponse(dictionaryServiceManager, "v1/dictionary", "POST", GSON.toJson(inputColumns),
+    String response = TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary", "POST", GSON.toJson(inputColumns),
                                          HttpResponseStatus.OK.getCode());
     Type hashMapType = new TypeToken<HashMap<String, List>>() {
     }.getType();
@@ -157,14 +175,14 @@ public class DataDictionaryTest extends TestBase {
     colName = "columnValidate1";
     colNameSecond = "columnValidate2";
     colNameThird = "wrongCol";
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName,
-                       "POST", requestJson, HttpResponseStatus.OK.getCode());
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/" + colName, "POST", requestJson,
+                                  HttpResponseStatus.OK.getCode());
     DictionaryResult dictionaryResult;
 
     // Assert response for wrong column name
     dictionaryResult = new DictionaryResult(colNameThird, "Float", false, false, null, null);
-    String responseWithWrongCol = getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate", "POST",
-                                                     GSON.toJson(dictionaryResult),
+    String responseWithWrongCol = TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate",
+                                                                "POST", GSON.toJson(dictionaryResult),
                                                      HttpResponseStatus.NOT_FOUND.getCode());
     Type hashMapType = new TypeToken<HashMap<String, String>>() {
     }.getType();
@@ -173,8 +191,8 @@ public class DataDictionaryTest extends TestBase {
 
     // Assert values with wrong schema
     dictionaryResult = new DictionaryResult(colName, "Float", false, false, null, null);
-    String responseWithErrors = getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate", "POST",
-                                                   GSON.toJson(dictionaryResult),
+    String responseWithErrors = TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate",
+                                                              "POST", GSON.toJson(dictionaryResult),
                                                    HttpResponseStatus.CONFLICT.getCode());
     Type linkedHashMapType = new TypeToken<LinkedHashMap<String, Object>>() {
     }.getType();
@@ -188,7 +206,7 @@ public class DataDictionaryTest extends TestBase {
 
     // Assert status code with correct schema
     dictionaryResult = new DictionaryResult(colName, "String", false, false, null, null);
-    getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate", "POST",
+    TEST_UTILS.getServiceResponse(dictionaryServiceManager, "v1/dictionary/validate", "POST",
                        GSON.toJson(dictionaryResult), HttpResponseStatus.OK.getCode());
   }
 }
